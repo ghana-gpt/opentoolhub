@@ -2,146 +2,48 @@
 
 OpenToolHub is a community-curated platform for discovering, comparing, combining, and launching with public APIs, open data sources, AI tools, and no-code integrations.
 
-Our mission is to make it easier for everyone to find the right digital tools for the problem they want to solve — whether they are building an app, launching an MVP, creating an AI assistant, or working on a civic-tech or public-good idea.
+Our mission is simple: help developers, startups, students, nonprofits, AI builders, and everyday innovators find the right tools for the project they want to build — without wasting hours searching the web or stitching random APIs together.
 
-## Why this exists
+## Why this project exists
 
-There are thousands of APIs online, but people do not need more links.
+The internet has no shortage of APIs, but most people do not need more links.
 They need:
 
 - the right API for the job
-- the right stack of tools
-- starter code and working examples
+- the right combination of tools
 - clear use cases and patterns
-- practical recommendations they can trust
+- starter templates and examples
+- a practical system for discovery and building
 
-OpenToolHub brings those pieces together.
+OpenToolHub turns that chaos into a usable system.
 
 ## What OpenToolHub helps you build
 
 - travel, weather, and city apps
 - public safety and civic dashboards
-- finance and data-monitoring tools
+- finance, market, and data-monitoring tools
 - AI agents and research assistants
 - local business and community discovery apps
 - nonprofit and transparency tools
-- sports, news, media, and entertainment apps
+- sports, news, media, and entertainment portals
 
-## Core idea
-
-The project is built around a simple idea:
+## The core idea
 
 People should search by use case, not by guessing API names.
 
 Instead of asking:
 
-- which API should I use?
+- Which API should I use?
 
 They should be able to ask:
 
-- how do I build a travel planner?
-- how do I create a city dashboard?
-- how do I build a public health tracker?
-- how do I create an AI assistant with real-world tools?
-- what APIs should I combine for a startup MVP?
+- How do I build a travel planner?
+- How do I create a city dashboard?
+- How do I build a public health tracker?
+- How do I create an AI assistant with real-world tools?
+- What APIs should I combine for a startup MVP?
 
-OpenToolHub is designed to answer those questions with curated combinations, examples, and starter templates.
-
-## The project vision
-
-We want OpenToolHub to become a practical ecosystem for:
-
-- developers
-- AI builders
-- startup founders
-- students
-- nonprofits
-- civic-tech teams
-- researchers
-- no-code and low-code builders
-
-At the center is a single goal:
-
-Make public tools more discoverable, usable, and valuable for real work.
-
-## Repo structure
-
-```text
-.
-├── README.md
-├── CONTRIBUTING.md
-├── CODE_OF_CONDUCT.md
-├── ROADMAP.md
-├── LICENSE
-├── .gitignore
-├── data/
-│   ├── README.md
-│   ├── categories.json
-│   ├── use-cases.json
-│   ├── stacks.json
-│   └── apis.json
-├── docs/
-│   ├── getting-started.md
-│   ├── use-cases.md
-│   └── architecture.md
-├── examples/
-├── templates/
-│   ├── travel-app/
-│   ├── public-data-dashboard/
-│   └── ai-agent/
-├── scripts/
-│   └── recommend.py
-├── site/
-│   ├── index.html
-│   └── styles.css
-└── .github/
-    └── ISSUE_TEMPLATE/
-```
-
-## What is included right now
-
-This repository now includes:
-
-- a starter project structure
-- roadmap and contributor docs
-- curated use-case and stack ideas
-- a machine-readable data model for APIs and tool combinations
-- sample starter templates for common product ideas
-- a lightweight recommendation script
-- a simple landing-page prototype for the product vision
-
-## Curated data model
-
-The `data/` folder is where the project begins to turn ideas into recommendation systems.
-
-It contains:
-
-- categories
-- use cases
-- API records
-- real-world stack combinations
-
-This is the foundation for a future search experience, API recommendation engine, and public-tool discovery portal.
-
-## Example starter templates
-
-We have included initial starter ideas for:
-
-- travel app stack
-- public data dashboard
-- AI agent workflow
-
-These are meant to be expanded with more real examples over time.
-
-## Recommendation script
-
-The `scripts/recommend.py` script reads the curated data and suggests relevant stacks based on a selected use case.
-
-This provides a concrete first step toward a smarter recommendation engine.
-
-## Landing page prototype
-
-The `site/` folder contains a simple prototype landing page to visualize the product concept and give the project a stronger public-facing identity.
+OpenToolHub is designed to answer those questions with recommended stacks, starter templates, examples, and curated ideas.
 
 ## Why this matters
 
@@ -154,7 +56,136 @@ It is to build the missing layer between:
 - AI workflows
 - useful digital products
 
-We believe that public tools should be easier to discover and easier to use.
+We believe that public tools should be easier to discover, easier to combine, and easier to use.
+
+## Use cases
+
+### Developer projects
+
+- weather and travel apps
+- finance dashboards
+- local discovery tools
+- job boards and labor dashboards
+- public-facing reporting tools
+- AI app integrations
+
+### AI and agent workflows
+
+- search and retrieval tools
+- data extraction and summarization
+- document processing stacks
+- travel, weather, and productivity agents
+- public data assistants
+- knowledge tools for communities and organizations
+
+### Public good and civic innovation
+
+- disaster and emergency dashboards
+- public health information tools
+- local government transparency apps
+- climate and environment trackers
+- education and community information portals
+
+### No-code and low-code users
+
+- automations and workflow tools
+- data dashboards
+- local information systems
+- small business monitoring tools
+- research and reporting workflows
+
+## Featured stack ideas
+
+### Travel planner
+
+- weather API
+- maps and geolocation API
+- local events or POI data
+- currency conversion API
+- calendar or holiday API
+
+### City dashboard
+
+- maps and geo APIs
+- weather data
+- local public data
+- news or alerts feeds
+- public service or transport data
+
+### AI research assistant
+
+- search APIs
+- translation service
+- document or retrieval tools
+- knowledge sources
+- summarization and workspace tooling
+
+### Public health tracker
+
+- environmental data
+- public health datasets
+- alerts and nowcast data
+- mapping tools
+- reporting dashboards
+
+## Repository structure
+
+```text
+.
+├── README.md
+├── CONTRIBUTING.md
+├── CODE_OF_CONDUCT.md
+├── ROADMAP.md
+├── LICENSE
+├── .gitignore
+├── data/
+│   ├── README.md
+│   ├─��� categories.json
+│   ├── use-cases.json
+│   ├── stacks.json
+│   └── apis.json
+├── docs/
+│   ├── getting-started.md
+│   ├── use-cases.md
+│   ├── architecture.md
+│   └── stack-guide.md
+├── examples/
+├── templates/
+│   ├── travel-app/
+│   ├── public-data-dashboard/
+│   └── ai-agent/
+├── scripts/
+│   └── recommend.py
+├── site/
+│   ├── index.html
+│   └── styles.css
+├── .github/
+│   └── ISSUE_TEMPLATE/
+└── LICENSE
+```
+
+## Data model
+
+The `data/` folder stores structured metadata that powers the project's discovery layer.
+
+It contains:
+
+- categories
+- use cases
+- curated stack recommendations
+- API metadata
+
+This is the foundation for a future search experience, recommendation engine, and public-tool discovery portal.
+
+## Starter templates
+
+We include initial starter ideas for:
+
+- travel app stack
+- public data dashboard
+- AI agent workflow
+
+These are meant to be expanded with more real-world examples over time.
 
 ## How to contribute
 
