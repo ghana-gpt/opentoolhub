@@ -1,30 +1,43 @@
 # Travel app starter
 
-This template is intended for a product that combines travel planning, weather, local data, and maps.
+This starter is for builders who want to create a travel or local discovery product using public tools.
 
-## Typical use case
+## Typical problem
 
-- local trip planning
-- weather-aware travel suggestions
-- city recommendations
-- itinerary support
+A user wants a simple way to plan a trip, check local conditions, discover relevant places, and understand the destination before they arrive.
 
 ## Suggested stack
 
-- OpenWeatherMap
-- Mapbox
-- OpenStreetMap
-- ExchangeRate-API
-- Nager.Date
+- weather API
+- map and geolocation service
+- local directory or attraction feed
+- currency or travel data service
+- calendar or date-based data source
 
 ## Example flow
 
-1. Get user location and destination
-2. Pull weather forecast for the trip window
-3. Get map data and route suggestions
-4. Add exchange rates and travel-day reminders
-5. Present a simple itinerary and recommendations dashboard
+1. User selects a location or travel window.
+2. Weather and travel conditions are shown.
+3. Maps and local points of interest appear.
+4. Pricing and local information help frame the trip.
+5. The user gets a more complete travel overview in one place.
 
-## Next steps
+## Recommended features
 
-Add your own app logic, UI, and persistence layer.
+- city and route views
+- local activity cards
+- point-of-interest discovery
+- weather summary panel
+- travel summary or itinerary section
+
+## Best use cases
+
+- travel planning apps
+- local guides
+- trip assistants
+- destination dashboards
+- travel-based startup prototypes
+
+## Why this matters
+
+Travel tools are a strong everyday example of how public tools work well together when they are connected around a clear user need.

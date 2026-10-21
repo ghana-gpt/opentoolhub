@@ -1,69 +1,61 @@
 # Contributing to OpenToolHub
 
-Thanks for wanting to contribute to OpenToolHub.
+Thanks for being interested in OpenToolHub.
 
-This project is meant to be practical, useful, and community-driven. We welcome contributions that improve the project, add useful API recommendations, share examples, and help builders discover better tools.
+We are building a practical project for discovering public tools by real-world use case and stack. Contributions are welcome as long as they are useful, clear, and grounded in actual product thinking.
 
 ## Ways to contribute
 
-You can help by:
+You can contribute in several ways:
 
-- suggesting new categories or use cases
-- adding public APIs or data sources
-- improving documentation
-- writing starter templates
-- contributing real-world examples
-- reporting issues or missing information
-- helping improve the project roadmap and structure
+- suggest a new use case
+- propose a stack recommendation
+- add a starter template or example
+- improve documentation and onboarding
+- share a practical workflow that uses public tools
+- help refine the project story and positioning
 
-## Getting started
+## What makes a good contribution
 
-1. Fork the repository.
-2. Create a feature branch.
-3. Make your changes.
-4. Submit a pull request with a clear description.
+Strong contributions usually do one or more of these things:
 
-## Contribution guidelines
+- explain a real problem or product idea
+- connect the idea to relevant tool categories
+- show how tools fit together in a stack
+- provide a clear example or starter path
+- help other builders move faster
 
-### Be useful
+## Contribution style
 
-Focus on projects, workflows, and tools that help people build real things.
+The project values clarity over hype.
 
-### Be accurate
+Please keep contributions:
 
-When adding tools or API metadata, verify the information as much as possible.
+- practical
+- specific
+- easy to understand
+- grounded in real builder needs
+- distinct from copied or generic boilerplate
 
-### Be clear
+## Suggested workflow
 
-Write readable docs and explain why a tool or stack matters.
+1. Pick a use case, problem, or stack idea.
+2. Write a short explanation.
+3. Add key categories and how they fit together.
+4. Share why the combination is helpful.
+5. Open a pull request or issue with your contribution.
 
-### Be inclusive
+## Project principles
 
-This project is for a wide range of users, including developers, startups, educators, nonprofits, and AI builders.
+We aim for:
 
-## Suggested contribution areas
+- real usefulness over vanity
+- simple and clear docs over clutter
+- original thinking over imitation
+- practical product value over empty hype
 
-- API and data source recommendations
-- use-case documentation
-- starter app templates
-- stack examples for AI, travel, public health, civic tech, finance, and more
-- docs and onboarding improvements
-- architecture and roadmap ideas
+## Questions or ideas
 
-## Pull request expectations
+If you are unsure where to start, pick a use case and propose a stack or a starter template. That is often the easiest and most valuable contribution.
 
-Please include:
-
-- a short summary of the change
-- why the change matters
-- any relevant links or resources
-- the project area the change affects
-
-## Code of conduct
-
-This project follows a respectful, inclusive, and constructive collaboration standard.
-Please read [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) before contributing.
-
-## Questions?
-
-Open an issue or start a discussion. We are happy to help clarify the direction of the project.
+We are glad to have you here.
