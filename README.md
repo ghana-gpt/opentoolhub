@@ -110,3 +110,72 @@ OpenToolHub is designed to become a living ecosystem with:
 ├── examples/
 ├── templates/
 └── data/
+```
+
+## Current focus
+
+This repository is being built as a foundation for:
+
+- a curated public-tool catalog
+- use-case-driven API discovery
+- open-source starter kits
+- AI and automation workflow support
+- community collaboration around useful digital systems
+
+## How to contribute
+
+We welcome contributions from:
+
+- API curators
+- developers
+- designers
+- AI builders
+- technical writers
+- community contributors
+- people building public-good tools
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+
+## Community and values
+
+We believe powerful digital tools should be easier to discover, easier to use, and easier to share.
+
+OpenToolHub is built around:
+
+- openness
+- accessibility
+- transparency
+- community contribution
+- practical usefulness
+
+## Roadmap
+
+See [ROADMAP.md](ROADMAP.md) for the near-term and long-term project direction.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
+
+## Start here
+
+If you want to help shape the project:
+
+1. Read the [docs/getting-started.md](docs/getting-started.md)
+2. Review the [ROADMAP.md](ROADMAP.md)
+3. Open an issue or discussion with an idea
+4. Contribute a use case, template, or curated API stack
+
+## A note on the bigger mission
+
+Our long-term goal is simple:
+
+To make public tools, APIs, and data easier to discover and use for everyone — from developers building products to communities solving real-world problems.
+
+We do not need more fragmented searches.
+We need better systems.
+
+OpenToolHub aims to be one of those systems.
+
+---
+
+Built for builders, communities, and AI-powered innovation.

@@ -1,0 +1,16 @@
+# .gitignore
+
+.DS_Store
+Thumbs.db
+node_modules/
+.env
+.env.*
+__pycache__/
+*.pyc
+*.log
+.vscode/
+.idea/
+.dist/
+build/
+dist/
+coverage/
