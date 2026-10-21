@@ -1,0 +1,54 @@
+[
+  {
+    "id": "travel-stack",
+    "name": "Travel planner stack",
+    "description": "A practical API combination for weather, map, and travel product experiences.",
+    "use_case": "travel-planner",
+    "recommended_apis": [
+      "openweather",
+      "mapbox",
+      "openstreetmap",
+      "exchange-rate-api",
+      "nager-date"
+    ]
+  },
+  {
+    "id": "city-stack",
+    "name": "City dashboard stack",
+    "description": "A dashboard stack for public service information, mapping, and local insights.",
+    "use_case": "city-dashboard",
+    "recommended_apis": [
+      "openstreetmap",
+      "openweather",
+      "gnews",
+      "nasa",
+      "open-data-example"
+    ]
+  },
+  {
+    "id": "ai-research-stack",
+    "name": "AI research assistant stack",
+    "description": "A modern stack for AI retrieval and information discovery across public sources.",
+    "use_case": "research-assistant",
+    "recommended_apis": [
+      "wikipedia",
+      "gnews",
+      "nasa",
+      "openweather",
+      "translation-api"
+    ]
+  },
+  {
+    "id": "public-health-stack",
+    "name": "Public health stack",
+    "description": "A stack for public data dashboards, alerts, and community monitoring tools.",
+    "use_case": "public-health-tracker",
+    "recommended_apis": [
+      "openweather",
+      "openstreetmap",
+      "open-data-example",
+      "world-bank",
+      "who-data"
+    ]
+  }
+]

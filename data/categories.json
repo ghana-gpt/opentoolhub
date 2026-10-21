@@ -1,0 +1,42 @@
+[
+  {
+    "id": "weather",
+    "name": "Weather",
+    "description": "Tools for forecasting, climate information, and environmental monitoring."
+  },
+  {
+    "id": "maps-geolocation",
+    "name": "Maps & Geolocation",
+    "description": "Location, routing, mapping, and geographic discovery APIs."
+  },
+  {
+    "id": "finance",
+    "name": "Finance",
+    "description": "Exchange rates, markets, payments, and financial data."
+  },
+  {
+    "id": "public-data",
+    "name": "Public Data",
+    "description": "Government and civic datasets that support public-good tools."
+  },
+  {
+    "id": "media",
+    "name": "Media & Content",
+    "description": "News, entertainment, media metadata, and content discovery APIs."
+  },
+  {
+    "id": "health",
+    "name": "Health",
+    "description": "Health information, wellness, and public-health-related data."
+  },
+  {
+    "id": "ai-tools",
+    "name": "AI Tools",
+    "description": "AI services, translation, summarization, and reasoning capabilities."
+  },
+  {
+    "id": "jobs",
+    "name": "Jobs & Employment",
+    "description": "Work, labor market, and opportunity discovery APIs."
+  }
+]

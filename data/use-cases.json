@@ -1,0 +1,37 @@
+[
+  {
+    "id": "travel-planner",
+    "name": "Travel planner",
+    "description": "A trip planning app with travel, weather, currency, and location features.",
+    "tags": ["travel", "weather", "maps", "finance"],
+    "recommended_categories": ["weather", "maps-geolocation", "finance"]
+  },
+  {
+    "id": "city-dashboard",
+    "name": "City dashboard",
+    "description": "A local dashboard for events, transportation, city services, and live updates.",
+    "tags": ["city", "local", "public-data", "maps"],
+    "recommended_categories": ["maps-geolocation", "public-data", "weather"]
+  },
+  {
+    "id": "public-health-tracker",
+    "name": "Public health tracker",
+    "description": "A platform for public health monitoring, environmental safety, and alerting.",
+    "tags": ["health", "public-good", "data"],
+    "recommended_categories": ["health", "public-data", "weather"]
+  },
+  {
+    "id": "research-assistant",
+    "name": "AI research assistant",
+    "description": "An AI helper that gathers information from news, data, docs, and public sources.",
+    "tags": ["ai", "research", "news", "data"],
+    "recommended_categories": ["ai-tools", "media", "public-data"]
+  },
+  {
+    "id": "startup-mvp",
+    "name": "Startup MVP",
+    "description": "A lean product built from public APIs, open integrations, and flexible infrastructure.",
+    "tags": ["startup", "product", "data", "api"],
+    "recommended_categories": ["maps-geolocation", "finance", "media", "public-data"]
+  }
+]
