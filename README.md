@@ -82,13 +82,20 @@ Make public tools more discoverable, usable, and valuable for real work.
 │   └── apis.json
 ├── docs/
 │   ├── getting-started.md
-│   └── use-cases.md
+│   ├── use-cases.md
+│   └── architecture.md
 ├── examples/
 ├── templates/
 │   ├── travel-app/
 │   ├── public-data-dashboard/
 │   └── ai-agent/
-└── scripts/
+├── scripts/
+│   └── recommend.py
+├── site/
+│   ├── index.html
+│   └── styles.css
+└── .github/
+    └── ISSUE_TEMPLATE/
 ```
 
 ## What is included right now
@@ -100,6 +107,8 @@ This repository now includes:
 - curated use-case and stack ideas
 - a machine-readable data model for APIs and tool combinations
 - sample starter templates for common product ideas
+- a lightweight recommendation script
+- a simple landing-page prototype for the product vision
 
 ## Curated data model
 
@@ -123,6 +132,16 @@ We have included initial starter ideas for:
 - AI agent workflow
 
 These are meant to be expanded with more real examples over time.
+
+## Recommendation script
+
+The `scripts/recommend.py` script reads the curated data and suggests relevant stacks based on a selected use case.
+
+This provides a concrete first step toward a smarter recommendation engine.
+
+## Landing page prototype
+
+The `site/` folder contains a simple prototype landing page to visualize the product concept and give the project a stronger public-facing identity.
 
 ## Why this matters
 
