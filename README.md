@@ -1,132 +1,120 @@
 # OpenToolHub
 
-OpenToolHub is a community-curated platform for discovering, comparing, combining, and launching with public APIs, open data sources, AI tools, and no-code integrations.
+OpenToolHub is a community-curated platform for discovering, comparing, combining, and launching with public APIs, open data sources, AI tools, and automation services.
 
-Our mission is simple: help developers, startups, students, nonprofits, AI builders, and everyday innovators find the right tools for the project they want to build — without wasting hours searching the web or stitching random APIs together.
+It is inspired by the idea behind public API directories, but built for a more practical mission: helping people move from idea to product faster.
 
-## Why this project exists
+Instead of simply listing APIs, OpenToolHub focuses on the real problem:
 
-The internet has no shortage of APIs, but most people do not need more links.
-They need:
-
-- the right API for the job
-- the right combination of tools
-- clear use cases and patterns
-- starter templates and examples
-- a practical system for discovery and building
-
-OpenToolHub turns that chaos into a usable system.
-
-## What OpenToolHub helps you build
-
-- travel, weather, and city apps
-- public safety and civic dashboards
-- finance, market, and data-monitoring tools
-- AI agents and research assistants
-- local business and community discovery apps
-- nonprofit and transparency tools
-- sports, news, media, and entertainment portals
-
-## The core idea
-
-People should search by use case, not by guessing API names.
-
-Instead of asking:
-
-- Which API should I use?
-
-They should be able to ask:
-
-- How do I build a travel planner?
-- How do I create a city dashboard?
-- How do I build a public health tracker?
-- How do I create an AI assistant with real-world tools?
-- What APIs should I combine for a startup MVP?
-
-OpenToolHub is designed to answer those questions with recommended stacks, starter templates, examples, and curated ideas.
+- what are you trying to build?
+- which public tools fit that goal?
+- which APIs should work together?
+- how do you turn a concept into a working product?
 
 ## Why this matters
 
-The bigger goal is not just to list APIs.
-It is to build the missing layer between:
+Public APIs are powerful, but many people still waste time searching for the right ones.
+The problem is not a lack of tools — it is a lack of clear guidance on how to combine them.
 
-- human ideas
-- public tools and data
-- software systems
+OpenToolHub helps bridge that gap by organizing public tools around:
+
+- product ideas
+- use cases
+- real-world app stacks
 - AI workflows
-- useful digital products
+- civic and public-good projects
+- startup and builder needs
 
-We believe that public tools should be easier to discover, easier to combine, and easier to use.
+## The bigger mission
 
-## Use cases
+We want OpenToolHub to be more than a directory.
+We want it to become a practical system for building with public tools.
 
-### Developer projects
+This means helping people find:
 
-- weather and travel apps
-- finance dashboards
-- local discovery tools
-- job boards and labor dashboards
-- public-facing reporting tools
-- AI app integrations
+- the right API for a job
+- the right stack of tools
+- the right app pattern
+- the right starter template
+- the right community examples
 
-### AI and agent workflows
+## What OpenToolHub helps you build
 
-- search and retrieval tools
-- data extraction and summarization
-- document processing stacks
-- travel, weather, and productivity agents
-- public data assistants
-- knowledge tools for communities and organizations
+- travel and weather apps
+- city dashboards and local discovery tools
+- public health and civic-tech dashboards
+- AI research assistants and workflow tools
+- startup MVPs built from public data and services
+- business tools, reporting dashboards, and media apps
+- no-code and low-code automation projects
 
-### Public good and civic innovation
+## Core idea
 
-- disaster and emergency dashboards
-- public health information tools
-- local government transparency apps
-- climate and environment trackers
-- education and community information portals
+OpenToolHub is built around one simple principle:
 
-### No-code and low-code users
+Search by use case, not just by API name.
 
-- automations and workflow tools
-- data dashboards
-- local information systems
-- small business monitoring tools
-- research and reporting workflows
+Instead of asking, "Which API should I use?"
 
-## Featured stack ideas
+people should be able to ask:
+
+- how do I build a travel planner?
+- how do I create a city dashboard?
+- how do I build a public health tracker?
+- how do I create an AI assistant with public tools?
+- what APIs should I combine for a startup MVP?
+
+OpenToolHub is designed to answer those questions with curated stacks and starter examples.
+
+## Use cases and stack thinking
+
+Most useful products are not built with one API.
+They are built as combinations of tools.
+
+Examples:
 
 ### Travel planner
-
 - weather API
 - maps and geolocation API
-- local events or POI data
+- local destination data
 - currency conversion API
-- calendar or holiday API
+- holiday or travel calendar API
 
 ### City dashboard
-
-- maps and geo APIs
-- weather data
-- local public data
-- news or alerts feeds
-- public service or transport data
+- maps and geographic data
+- weather APIs
+- local public datasets
+- alerts and news feeds
+- civic or transportation data
 
 ### AI research assistant
-
 - search APIs
-- translation service
-- document or retrieval tools
-- knowledge sources
-- summarization and workspace tooling
+- open knowledge sources
+- translation or language tools
+- summarization services
+- document or data retrieval systems
 
 ### Public health tracker
-
 - environmental data
 - public health datasets
-- alerts and nowcast data
+- alerts and emergency feeds
 - mapping tools
 - reporting dashboards
+
+## Project vision
+
+OpenToolHub is designed for:
+
+- developers
+- startups
+- AI builders
+- students
+- nonprofits
+- civic-tech teams
+- researchers
+- no-code and low-code builders
+
+The long-term goal is to make public tools easier to discover, easier to combine, and easier to use for real-world impact.
 
 ## Repository structure
 
@@ -140,7 +128,7 @@ We believe that public tools should be easier to discover, easier to combine, an
 ├── .gitignore
 ├── data/
 │   ├── README.md
-│   ├─��� categories.json
+│   ├── categories.json
 │   ├── use-cases.json
 │   ├── stacks.json
 │   └── apis.json
@@ -166,26 +154,24 @@ We believe that public tools should be easier to discover, easier to combine, an
 
 ## Data model
 
-The `data/` folder stores structured metadata that powers the project's discovery layer.
-
-It contains:
+The `data/` folder contains structured metadata for:
 
 - categories
 - use cases
+- api records
 - curated stack recommendations
-- API metadata
 
-This is the foundation for a future search experience, recommendation engine, and public-tool discovery portal.
+This is where the project starts becoming more than a static list. It lays the foundation for discovery, recommendations, and smarter use-case matching.
 
 ## Starter templates
 
-We include initial starter ideas for:
+This repo includes starter patterns for:
 
-- travel app stack
-- public data dashboard
-- AI agent workflow
+- travel app workflows
+- public data dashboards
+- AI agent architectures
 
-These are meant to be expanded with more real-world examples over time.
+These are intended to grow into full, reusable examples over time.
 
 ## How to contribute
 
@@ -194,11 +180,11 @@ We welcome contributions in many forms:
 - add a public API or data source
 - suggest a new use case
 - improve data quality
-- contribute a starter app or template
-- document a real stack that works
-- improve the roadmap and docs
+- add a starter app or template
+- write docs or explain a stack
+- share a real-world product idea
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for how to get started.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ## Roadmap
 
@@ -208,13 +194,13 @@ See [ROADMAP.md](ROADMAP.md).
 
 This project is licensed under the [MIT License](LICENSE).
 
-## The long-term goal
+## A simple mission statement
 
-OpenToolHub aims to become a practical public resource for building useful things with open tools, public data, and AI-ready APIs.
+OpenToolHub exists to make public tools more discoverable, more useful, and easier to build with.
 
-It is not just a directory.
-It is a system for building smarter, faster, and more accessibly with the tools the world already makes available.
+It is not just a directory of APIs.
+It is a practical system for building useful digital experiences with the tools the world already makes public.
 
 ---
 
-Built for builders, communities, and meaningful digital innovation.
+Built for thoughtful builders, communities, and meaningful digital innovation.
