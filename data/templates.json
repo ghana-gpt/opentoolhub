@@ -1,0 +1,44 @@
+[
+  {
+    "id": "travel-app",
+    "name": "Travel app",
+    "description": "Weather, maps, local places, and destination context in a single flow.",
+    "category": "Travel and local discovery",
+    "tags": ["travel", "maps", "local discovery", "weather"]
+  },
+  {
+    "id": "city-dashboard",
+    "name": "City dashboard",
+    "description": "A local information system for weather, community updates, maps, and public context.",
+    "category": "City dashboards",
+    "tags": ["city", "maps", "public data", "alerts"]
+  },
+  {
+    "id": "ai-agent",
+    "name": "AI agent",
+    "description": "Research, summarization, retrieval, and tool-based workflows for smarter answers.",
+    "category": "AI workflows",
+    "tags": ["ai", "research", "retrieval", "workflow"]
+  },
+  {
+    "id": "public-health-tracker",
+    "name": "Public health tracker",
+    "description": "Community health, alerts, and public-interest reporting in a clear dashboard.",
+    "category": "Health and civic tools",
+    "tags": ["health", "public data", "dashboard", "community"]
+  },
+  {
+    "id": "startup-mvp",
+    "name": "Startup MVP",
+    "description": "Lean product validation using open data, maps, and a minimal stack.",
+    "category": "Startup validation",
+    "tags": ["startup", "prototype", "analytics", "market"]
+  },
+  {
+    "id": "public-good-tool",
+    "name": "Public-good tool",
+    "description": "A local or civic product that helps people find and act on relevant public information.",
+    "category": "Public-interest tools",
+    "tags": ["civic", "public data", "community", "discovery"]
+  }
+]

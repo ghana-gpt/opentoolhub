@@ -3,136 +3,94 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>OpenToolHub</title>
+    <title>OpenToolHub | Builder-first public tool discovery</title>
     <meta
       name="description"
-      content="OpenToolHub helps builders discover the right public APIs, data sources, and AI tools for real projects."
+      content="OpenToolHub helps builders discover the right public tools, stacks, and starter templates for real projects and AI workflows."
     />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <header class="hero">
-      <nav class="topbar container">
-        <div class="brand">OpenToolHub</div>
-        <div class="nav-links">
-          <a href="#use-cases">Use Cases</a>
-          <a href="#stacks">Stacks</a>
-          <a href="#templates">Templates</a>
-          <a href="#mission">Mission</a>
-        </div>
-        <a class="button small" href="https://github.com/ghana-gpt/opentoolhub">GitHub</a>
-      </nav>
-
-      <div class="container hero-inner">
-        <div class="hero-copy">
-          <span class="eyebrow">Find the right public tools</span>
-          <h1>Discover the best stack for the product you want to build.</h1>
-          <p>
-            OpenToolHub helps developers, AI builders, startups, nonprofits, and creators match real world problems to public APIs, open data sources, and practical workflows.
-          </p>
-          <div class="cta-row">
-            <a class="button" href="https://github.com/ghana-gpt/opentoolhub">Explore the repo</a>
-            <a class="button secondary" href="#use-cases">See examples</a>
-          </div>
-        </div>
-
-        <div class="hero-card">
-          <h3>Featured use cases</h3>
-          <ul>
-            <li>Travel and local discovery</li>
-            <li>City dashboards</li>
-            <li>Public health tools</li>
-            <li>AI research workflows</li>
-            <li>Startup MVPs</li>
-          </ul>
-        </div>
+    <header class="site-header">
+      <div class="container nav-bar">
+        <a href="index.html" class="brand">OpenToolHub</a>
+        <nav class="nav-links">
+          <a href="index.html">Home</a>
+          <a href="use-cases.html">Use cases</a>
+          <a href="stacks.html">Stacks</a>
+          <a href="templates.html">Templates</a>
+        </nav>
+        <a class="button primary" href="https://github.com/ghana-gpt/opentoolhub">GitHub</a>
       </div>
     </header>
 
     <main>
-      <section id="use-cases" class="section container">
-        <div class="section-heading">
-          <span class="eyebrow">Use cases</span>
-          <h2>Start with the problem.</h2>
-        </div>
-
-        <div class="grid three">
-          <article class="card">
-            <h3>Travel and city life</h3>
-            <p>Find weather, maps, local data, and destination tools that work together in one product story.</p>
-          </article>
-          <article class="card">
-            <h3>AI workflows</h3>
-            <p>Match public information sources, data tools, and AI flows to real use cases and research needs.</p>
-          </article>
-          <article class="card">
-            <h3>Public-interest tools</h3>
-            <p>Build dashboards and systems for health, alerts, local information, and community usefulness.</p>
-          </article>
-        </div>
-      </section>
-
-      <section id="stacks" class="section alt">
-        <div class="container">
-          <div class="section-heading">
-            <span class="eyebrow">Stack approach</span>
-            <h2>Build from proven combinations.</h2>
-          </div>
-
-          <div class="stack-list">
-            <div class="stack-item">
-              <strong>Travel planner</strong>
-              <span>Weather + maps + local discovery + currency</span>
-            </div>
-            <div class="stack-item">
-              <strong>City dashboard</strong>
-              <span>Maps + weather + local events + public data</span>
-            </div>
-            <div class="stack-item">
-              <strong>AI research assistant</strong>
-              <span>Search + knowledge + translation + summarization</span>
-            </div>
-            <div class="stack-item">
-              <strong>Startup MVP</strong>
-              <span>Public data + simple UI + prototype workflow + validation</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="templates" class="section container">
-        <div class="section-heading">
-          <span class="eyebrow">Templates</span>
-          <h2>Launch faster with starter patterns.</h2>
-        </div>
-
-        <div class="grid three">
-          <article class="card">
-            <h3>Travel app</h3>
-            <p>Weather, navigation, local discovery, and destination context in one lightweight workflow.</p>
-          </article>
-          <article class="card">
-            <h3>City dashboard</h3>
-            <p>Maps, local news, public info, environmental context, and community relevance.</p>
-          </article>
-          <article class="card">
-            <h3>AI agent</h3>
-            <p>Search, summarization, retrieval, and public information workflows for useful assistants.</p>
-          </article>
-        </div>
-      </section>
-
-      <section id="mission" class="section alt">
-        <div class="container about-box">
+      <section class="hero">
+        <div class="container hero-grid">
           <div>
-            <span class="eyebrow">Mission</span>
-            <h2>Make public tools easier to discover and use.</h2>
+            <span class="eyebrow">Build with the right tools</span>
+            <h1>Find the right public tools for the project you want to build.</h1>
+            <p class="lead">
+              OpenToolHub helps developers, builders, civic teams, and AI creators move from an idea to a practical stack with less friction and more clarity.
+            </p>
+            <div class="cta-row">
+              <a class="button primary" href="use-cases.html">Explore use cases</a>
+              <a class="button secondary" href="stacks.html">View stacks</a>
+            </div>
+          </div>
+
+          <div class="hero-panel">
+            <h3>Featured paths</h3>
+            <ul>
+              <li>Travel and local discovery</li>
+              <li>City dashboards and public data</li>
+              <li>AI research and answer workflows</li>
+              <li>Public-health and civic tools</li>
+              <li>Startup MVPs and prototypes</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="section container">
+        <div class="section-head">
+          <span class="eyebrow">Use cases</span>
+          <h2>Start with the problem, not the API list.</h2>
+        </div>
+        <div id="featured-use-cases" class="grid three"></div>
+      </section>
+
+      <section class="section alt">
+        <div class="container">
+          <div class="section-head">
+            <span class="eyebrow">Featured stacks</span>
+            <h2>Recommended combinations for real workflows.</h2>
+          </div>
+          <div id="featured-stacks" class="grid three"></div>
+        </div>
+      </section>
+
+      <section class="section container">
+        <div class="section-head">
+          <span class="eyebrow">Starter templates</span>
+          <h2>Launch faster with a working starting pattern.</h2>
+        </div>
+        <div id="featured-templates" class="grid three"></div>
+      </section>
+
+      <section class="section alt">
+        <div class="container spotlight">
+          <div>
+            <span class="eyebrow">Why this project matters</span>
+            <h2>Public tools are useful — but discovery is still fragmented.</h2>
           </div>
           <p>
-            OpenToolHub is designed to reduce the friction between an idea and a useful digital product. We want people to find the right tools, combine them thoughtfully, and build faster.
+            OpenToolHub exists to make that discovery clearer. Instead of treating APIs as isolated pieces, we map them to real product ideas, stack combinations, and builder workflows.
           </p>
         </div>
       </section>
     </main>
+
+    <script src="app.js"></script>
   </body>
 </html>
