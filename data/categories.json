@@ -1,42 +1,82 @@
 [
   {
+    "id": "maps",
+    "name": "Maps and location",
+    "description": "Geolocation, routing, map data, local discovery, and place context.",
+    "tags": ["geo", "local", "navigation"],
+    "best_for": ["travel apps", "city guides", "local dashboards"],
+    "integration_complexity": "medium"
+  },
+  {
     "id": "weather",
-    "name": "Weather",
-    "description": "Tools for forecasting, climate information, and environmental monitoring."
-  },
-  {
-    "id": "maps-geolocation",
-    "name": "Maps & Geolocation",
-    "description": "Location, routing, mapping, and geographic discovery APIs."
-  },
-  {
-    "id": "finance",
-    "name": "Finance",
-    "description": "Exchange rates, markets, payments, and financial data."
+    "name": "Weather and environment",
+    "description": "Weather, climate, air quality, and environmental monitoring tools.",
+    "tags": ["forecast", "climate", "safety"],
+    "best_for": ["travel tools", "public alerts", "environmental dashboards"],
+    "integration_complexity": "low"
   },
   {
     "id": "public-data",
-    "name": "Public Data",
-    "description": "Government and civic datasets that support public-good tools."
+    "name": "Public data and civic feeds",
+    "description": "Open public datasets, civic information, local reporting, and public-interest data.",
+    "tags": ["civic", "public", "community"],
+    "best_for": ["city tools", "public-health dashboards", "community platforms"],
+    "integration_complexity": "medium"
   },
   {
-    "id": "media",
-    "name": "Media & Content",
-    "description": "News, entertainment, media metadata, and content discovery APIs."
+    "id": "ai-workflows",
+    "name": "AI workflows and retrieval",
+    "description": "Search, summarization, reasoning, retrieval, document processing, and orchestration.",
+    "tags": ["ai", "agents", "retrieval"],
+    "best_for": ["research assistants", "workflow tools", "answer engines"],
+    "integration_complexity": "medium"
   },
   {
-    "id": "health",
-    "name": "Health",
-    "description": "Health information, wellness, and public-health-related data."
+    "id": "local-discovery",
+    "name": "Local discovery",
+    "description": "Businesses, events, neighborhoods, local recommendations, and activity feeds.",
+    "tags": ["local", "places", "events"],
+    "best_for": ["travel apps", "city guides", "community portals"],
+    "integration_complexity": "low"
   },
   {
-    "id": "ai-tools",
-    "name": "AI Tools",
-    "description": "AI services, translation, summarization, and reasoning capabilities."
+    "id": "finance-data",
+    "name": "Finance and market data",
+    "description": "Public market, pricing, or business intelligence feeds for product validation.",
+    "tags": ["market", "pricing", "analytics"],
+    "best_for": ["startup MVPs", "market dashboards", "product experiments"],
+    "integration_complexity": "medium"
   },
   {
-    "id": "jobs",
-    "name": "Jobs & Employment",
-    "description": "Work, labor market, and opportunity discovery APIs."
+    "id": "health-data",
+    "name": "Health and public-interest data",
+    "description": "Public health tracking, environmental health, and social-impact data sources.",
+    "tags": ["health", "wellbeing", "impact"],
+    "best_for": ["health dashboards", "community reporting", "public-interest tools"],
+    "integration_complexity": "medium"
+  },
+  {
+    "id": "news-and-sources",
+    "name": "News and information sources",
+    "description": "News, issue monitoring, and public information streams for context and discovery.",
+    "tags": ["news", "monitoring", "public info"],
+    "best_for": ["research", "tracking", "news-based apps"],
+    "integration_complexity": "low"
+  },
+  {
+    "id": "search-and-retrieval",
+    "name": "Search and retrieval",
+    "description": "Search, indexing, discovery, knowledge lookup, and retrieval backends.",
+    "tags": ["search", "retrieval", "knowledge"],
+    "best_for": ["AI assistants", "research tools", "discovery apps"],
+    "integration_complexity": "medium"
+  },
+  {
+    "id": "analytics",
+    "name": "Analytics and tracking",
+    "description": "Behavioral analytics, events, experimentation, and product signals.",
+    "tags": ["analytics", "tracking", "experiments"],
+    "best_for": ["MVPs", "dashboards", "prototype validation"],
+    "integration_complexity": "low"
   }
 ]

@@ -1,37 +1,50 @@
 [
   {
     "id": "travel-planner",
-    "name": "Travel planner",
-    "description": "A trip planning app with travel, weather, currency, and location features.",
-    "tags": ["travel", "weather", "maps", "finance"],
-    "recommended_categories": ["weather", "maps-geolocation", "finance"]
+    "name": "Travel and local discovery",
+    "summary": "Useful for trip planning, local discovery, and destination exploration.",
+    "goal": "Help people understand where to go and what matters when they arrive.",
+    "categories": ["maps", "weather", "local-discovery"],
+    "starter_template": "travel-app"
   },
   {
     "id": "city-dashboard",
     "name": "City dashboard",
-    "description": "A local dashboard for events, transportation, city services, and live updates.",
-    "tags": ["city", "local", "public-data", "maps"],
-    "recommended_categories": ["maps-geolocation", "public-data", "weather"]
+    "summary": "Useful for local insight, city information, and community-oriented experiences.",
+    "goal": "Give users a useful overview of local conditions and important city context.",
+    "categories": ["maps", "public-data", "local-discovery", "weather"],
+    "starter_template": "city-dashboard"
   },
   {
-    "id": "public-health-tracker",
-    "name": "Public health tracker",
-    "description": "A platform for public health monitoring, environmental safety, and alerting.",
-    "tags": ["health", "public-good", "data"],
-    "recommended_categories": ["health", "public-data", "weather"]
-  },
-  {
-    "id": "research-assistant",
+    "id": "ai-research-assistant",
     "name": "AI research assistant",
-    "description": "An AI helper that gathers information from news, data, docs, and public sources.",
-    "tags": ["ai", "research", "news", "data"],
-    "recommended_categories": ["ai-tools", "media", "public-data"]
+    "summary": "Useful for search, answer generation, summarization, and research support.",
+    "goal": "Turn public information into a useful and well-structured workflow.",
+    "categories": ["ai-workflows", "search-and-retrieval", "news-and-sources"],
+    "starter_template": "ai-agent"
+  },
+  {
+    "id": "public-health-platform",
+    "name": "Public health and community reporting",
+    "summary": "Useful for community health, public conditions, and reporting dashboards.",
+    "goal": "Help people access useful public-health and local condition information.",
+    "categories": ["health-data", "public-data", "maps", "weather"],
+    "starter_template": "public-health-tracker"
   },
   {
     "id": "startup-mvp",
-    "name": "Startup MVP",
-    "description": "A lean product built from public APIs, open integrations, and flexible infrastructure.",
-    "tags": ["startup", "product", "data", "api"],
-    "recommended_categories": ["maps-geolocation", "finance", "media", "public-data"]
+    "name": "Startup MVP and prototype validation",
+    "summary": "Useful for validating ideas using public data and minimal infrastructure.",
+    "goal": "Prototype a product idea quickly with the smallest reliable stack.",
+    "categories": ["finance-data", "analytics", "maps", "public-data"],
+    "starter_template": "startup-mvp"
+  },
+  {
+    "id": "public-good-tool",
+    "name": "Public-interest and civic tool",
+    "summary": "Useful for community updates, public information systems, and local service discovery.",
+    "goal": "Make useful information easier to find, interpret, and act on.",
+    "categories": ["public-data", "maps", "local-discovery", "news-and-sources"],
+    "starter_template": "public-good-tool"
   }
 ]

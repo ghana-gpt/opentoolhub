@@ -1,54 +1,81 @@
 [
   {
     "id": "travel-stack",
-    "name": "Travel planner stack",
-    "description": "A practical API combination for weather, map, and travel product experiences.",
     "use_case": "travel-planner",
-    "recommended_apis": [
-      "openweather",
-      "mapbox",
-      "openstreetmap",
-      "exchange-rate-api",
-      "nager-date"
-    ]
+    "name": "Travel planner stack",
+    "categories": ["maps", "weather", "local-discovery"],
+    "recommended_tools": [
+      "map service",
+      "weather API",
+      "local places feed",
+      "currency or travel data source"
+    ],
+    "notes": "Best for trip planning and destination-aware experiences.",
+    "difficulty": "medium",
+    "best_for": ["travel apps", "local guides", "trip planners"]
   },
   {
-    "id": "city-stack",
-    "name": "City dashboard stack",
-    "description": "A dashboard stack for public service information, mapping, and local insights.",
+    "id": "city-dashboard-stack",
     "use_case": "city-dashboard",
-    "recommended_apis": [
-      "openstreetmap",
-      "openweather",
-      "gnews",
-      "nasa",
-      "open-data-example"
-    ]
+    "name": "City dashboard stack",
+    "categories": ["maps", "public-data", "local-discovery", "weather"],
+    "recommended_tools": [
+      "map service",
+      "local event feed",
+      "public data source",
+      "weather API",
+      "alert feed"
+    ],
+    "notes": "Best for local information dashboards and neighborhood discovery tools.",
+    "difficulty": "medium",
+    "best_for": ["city tools", "community platforms", "public info dashboards"]
   },
   {
     "id": "ai-research-stack",
-    "name": "AI research assistant stack",
-    "description": "A modern stack for AI retrieval and information discovery across public sources.",
-    "use_case": "research-assistant",
-    "recommended_apis": [
-      "wikipedia",
-      "gnews",
-      "nasa",
-      "openweather",
-      "translation-api"
-    ]
+    "use_case": "ai-research-assistant",
+    "name": "AI research workflow stack",
+    "categories": ["ai-workflows", "search-and-retrieval", "news-and-sources"],
+    "recommended_tools": [
+      "retrieval layer",
+      "search API",
+      "summarization tool",
+      "knowledge source",
+      "orchestration layer"
+    ],
+    "notes": "Best for research assistants, search-powered Q&A, and information workflows.",
+    "difficulty": "medium",
+    "best_for": ["AI tools", "research products", "answer engines"]
   },
   {
     "id": "public-health-stack",
-    "name": "Public health stack",
-    "description": "A stack for public data dashboards, alerts, and community monitoring tools.",
-    "use_case": "public-health-tracker",
-    "recommended_apis": [
-      "openweather",
-      "openstreetmap",
-      "open-data-example",
-      "world-bank",
-      "who-data"
-    ]
+    "use_case": "public-health-platform",
+    "name": "Public health reporting stack",
+    "categories": ["health-data", "public-data", "maps", "weather"],
+    "recommended_tools": [
+      "health dataset",
+      "environmental data feed",
+      "map service",
+      "dashboard layer",
+      "alert source"
+    ],
+    "notes": "Best for public-interest tools and community reporting workflows.",
+    "difficulty": "medium",
+    "best_for": ["health dashboards", "public-interest products", "civic tools"]
+  },
+  {
+    "id": "startup-mvp-stack",
+    "use_case": "startup-mvp",
+    "name": "Startup MVP stack",
+    "categories": ["finance-data", "analytics", "maps", "public-data"],
+    "recommended_tools": [
+      "public dataset",
+      "map service",
+      "analytics tracker",
+      "market feed",
+      "simple dashboard layer"
+    ],
+    "notes": "Best for speedy product validation and lean prototype builds.",
+    "difficulty": "low",
+    "best_for": ["startups", "prototype builders", "lean teams"]
   }
 ]
