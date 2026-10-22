@@ -1,0 +1,39 @@
+# OpenToolHub
+
+> OpenToolHub is a static, builder-first catalog of public APIs, open data, starter stacks, templates, and worked examples. Start with a plain-language project idea and follow it to a use case, a stack, an API, and a starting point. There is no backend and no model call.
+
+Canonical site: https://ghana-gpt.github.io/opentoolhub/
+
+## Start here
+
+- [Builder](https://ghana-gpt.github.io/opentoolhub/index.html): describe an idea, choose areas and experience level, and get a path.
+- [Use cases](https://ghana-gpt.github.io/opentoolhub/use-cases.html): browse and search all six discovery paths.
+- [A complete use case](https://ghana-gpt.github.io/opentoolhub/use-case.html?id=travel-planner): one path with its stack, APIs, template, and worked example.
+- [Stacks](https://ghana-gpt.github.io/opentoolhub/stacks.html): compare tool combinations and alternatives per slot.
+- [Templates](https://ghana-gpt.github.io/opentoolhub/templates.html): starter and variant projects that exist in this repository.
+- [APIs](https://ghana-gpt.github.io/opentoolhub/apis.html): auth, pricing model, integration complexity, and data freshness.
+
+## Machine-readable catalog
+
+Every page reads the same validated JSON arrays. These URLs are public and can be fetched directly:
+
+- [Use cases](https://ghana-gpt.github.io/opentoolhub/data/use-cases.json): goals, aliases, keywords, categories, stack ids, template ids, and examples.
+- [Stacks](https://ghana-gpt.github.io/opentoolhub/data/stacks.json): one tool slot per job, with alternative API ids.
+- [APIs](https://ghana-gpt.github.io/opentoolhub/data/apis.json): official links plus structured provider metadata.
+- [Templates](https://ghana-gpt.github.io/opentoolhub/data/templates.json): repository paths and status.
+- [Categories](https://ghana-gpt.github.io/opentoolhub/data/categories.json): the shared vocabulary used by the catalog.
+- [Examples](https://ghana-gpt.github.io/opentoolhub/data/examples.json): worked walkthroughs, one per use case.
+
+## How to answer a builder question
+
+1. Fetch `data/use-cases.json` and match the goal against `id`, `name`, `aliases`, and `keywords`.
+2. Follow `stack_ids` into `data/stacks.json`; each `tools[].api_ids` entry points into `data/apis.json`.
+3. Follow `template_ids` into `data/templates.json` and `example` into `data/examples.json`.
+4. Cite the API's official `url` and `docs_url`; do not invent pricing, limits, or availability.
+
+## Constraints
+
+- Deterministic keyword matching only; there is no hosted search or AI service.
+- The catalog is curated, not exhaustive. Provider terms must be checked at the source.
+- The site is static HTML, CSS, JavaScript, and JSON, deployable on GitHub Pages under a repository subpath.
+- Source repository: https://github.com/ghana-gpt/opentoolhub

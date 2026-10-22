@@ -1,4 +1,4 @@
-name: Deploy site
+name: Deploy OpenToolHub to GitHub Pages
 
 on:
   push:
@@ -29,8 +29,20 @@ jobs:
       - name: Validate data
         run: python3 scripts/validate.py --strict
 
+      - name: Run tests
+        run: python3 -m unittest discover -s tests -v
+
       - name: Stage site data
         run: python3 scripts/build_site.py
+
+      - name: Verify the Pages artifact
+        run: |
+          python3 scripts/build_site.py --check
+          test -f site/index.html
+          test -f site/404.html
+          test -f site/data/use-cases.json
+          test -f site/data/apis.json
+          test -f site/llms.txt
 
       - name: Configure Pages
         uses: actions/configure-pages@v5

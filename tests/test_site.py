@@ -7,13 +7,16 @@ elements a page does not contain, and broken relative imports.
 
 from __future__ import annotations
 
+import json
 import re
 import unittest
+import xml.etree.ElementTree as ET
 from html.parser import HTMLParser
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SITE = ROOT / "site"
+SITE_URL = "https://ghana-gpt.github.io/opentoolhub/"
 
 PAGE_SCRIPTS = {
     "index.html": "js/home.js",
@@ -38,6 +41,7 @@ class PageParser(HTMLParser):
         self.lang = ""
         self.has_main = False
         self.title = ""
+        self.description = ""
         self._in_title = False
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
@@ -48,6 +52,8 @@ class PageParser(HTMLParser):
             self.has_main = True
         if tag == "title":
             self._in_title = True
+        if tag == "meta" and values.get("name") == "description":
+            self.description = values.get("content", "")
         if values.get("id"):
             self.ids.add(values["id"])
         if tag == "script" and values.get("src"):
@@ -91,6 +97,7 @@ class SiteTests(unittest.TestCase):
                 parsed = parse_page(page)
                 self.assertEqual(parsed.lang, "en")
                 self.assertTrue(parsed.title.strip(), "missing <title>")
+                self.assertTrue(parsed.description.strip(), "missing meta description")
                 self.assertTrue(parsed.has_main, "missing <main>")
 
     def test_local_assets_and_links_exist(self):
@@ -125,6 +132,25 @@ class SiteTests(unittest.TestCase):
                         f"{script} selects #{element_id}, absent from {page}",
                     )
 
+    def test_refs_are_subpath_safe(self):
+        """Pages serves the site under /<repo>/, so do not use root-absolute URLs."""
+        for page in PAGE_SCRIPTS:
+            parsed = parse_page(page)
+            for reference in parsed.refs:
+                with self.subTest(page=page, reference=reference):
+                    self.assertFalse(
+                        reference.startswith(("/", "\\")),
+                        f"{page} uses root-absolute URL {reference}",
+                    )
+        for script in sorted((SITE / "js").glob("*.js")):
+            code = script.read_text(encoding="utf-8")
+            for target in re.findall(r"""fetch\(\s*[`"']([^`"']+)""", code):
+                with self.subTest(script=script.name, target=target):
+                    self.assertFalse(
+                        target.startswith("/"),
+                        f"{script.name} fetches root-absolute {target}",
+                    )
+
     def test_module_imports_resolve(self):
         for script in sorted((SITE / "js").glob("*.js")):
             code = script.read_text(encoding="utf-8")
@@ -134,6 +160,50 @@ class SiteTests(unittest.TestCase):
                         (script.parent / specifier).is_file(),
                         f"{script.name} imports missing {specifier}",
                     )
+
+    def test_discovery_files_exist(self):
+        for name in (".nojekyll", "llms.txt", "robots.txt", "sitemap.xml"):
+            with self.subTest(name=name):
+                self.assertTrue((SITE / name).is_file(), f"missing site/{name}")
+
+    def test_sitemap_entries_resolve(self):
+        root = ET.parse(SITE / "sitemap.xml").getroot()
+        namespace = {"sitemap": "http://www.sitemaps.org/schemas/sitemap/0.9"}
+        locations = [
+            node.text or ""
+            for node in root.findall("sitemap:url/sitemap:loc", namespace)
+        ]
+        self.assertGreaterEqual(len(locations), len(PAGE_SCRIPTS))
+        for location in locations:
+            with self.subTest(location=location):
+                self.assertTrue(location.startswith(SITE_URL))
+                relative = location[len(SITE_URL) :].split("?")[0].split("#")[0]
+                self.assertTrue((SITE / (relative or "index.html")).is_file())
+
+        use_cases = json.loads(
+            (ROOT / "data" / "use-cases.json").read_text(encoding="utf-8")
+        )
+        for use_case in use_cases:
+            expected = f"{SITE_URL}use-case.html?id={use_case['id']}"
+            with self.subTest(use_case=use_case["id"]):
+                self.assertIn(expected, locations)
+
+    def test_llms_txt_maps_pages_and_catalog(self):
+        text = (SITE / "llms.txt").read_text(encoding="utf-8")
+        for page in PAGE_SCRIPTS:
+            needle = f"{SITE_URL}{page}"
+            if page == "use-case.html":
+                needle += "?id="
+            self.assertIn(needle, text)
+        for name in (
+            "categories",
+            "use-cases",
+            "stacks",
+            "apis",
+            "templates",
+            "examples",
+        ):
+            self.assertIn(f"{SITE_URL}data/{name}.json", text)
 
     def test_no_legacy_entrypoint(self):
         self.assertFalse((SITE / "app.js").exists())

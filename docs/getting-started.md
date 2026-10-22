@@ -46,7 +46,9 @@ python3 scripts/build_site.py --serve
 ```
 
 Open <http://127.0.0.1:8000/>. The command copies `data/*.json` into
-`site/data/`, then serves `site/` with caching disabled.
+`site/data/`, then serves `site/` with caching disabled. `make serve` is a
+shorter equivalent, and `make check` runs the validator, tests, staging build,
+and stale-copy check in one command.
 
 Do not open the HTML files directly from disk. Browsers block `fetch()` for
 `file://` URLs, and the pages will show a "Catalog unavailable" message with the
@@ -78,6 +80,17 @@ For a recommender change, edit `scripts/recommend.py` and add a test in
 `tests/test_recommend.py`. Ranking must stay data-driven: no use case ids or
 answers should be hardcoded in the matching logic.
 
+## 6. Publish to GitHub Pages
+
+In **Settings → Pages**, set **Source** to **GitHub Actions**. Push to `main`
+and the “Deploy OpenToolHub to GitHub Pages” workflow validates the data, tests
+it, stages `site/data/`, verifies the artifact, and deploys `site/`.
+
+The site is then at <https://ghana-gpt.github.io/opentoolhub/>. Do not deploy the
+repository root or a branch folder: `site/data/` is generated and only exists
+after `scripts/build_site.py` runs. [deployment.md](deployment.md) covers local
+artifact checks, workflow permissions, and subpath failures.
+
 ## Troubleshooting
 
 | Symptom | Fix |
@@ -87,12 +100,14 @@ answers should be hardcoded in the matching logic.
 | Port 8000 is busy | Set `OPEN_TOOL_HUB_PORT=8080` before `--serve` |
 | Validator reports a path error | Create the missing template or example file, or fix the path |
 | Tests fail after editing JSON | Fix the validator errors first; ranking tests use the same files |
+| GitHub Pages shows no data | The artifact must be built from `site/` after `build_site.py`; see [deployment.md](deployment.md) |
 
 `OPEN_TOOL_HUB_HOST` and `OPEN_TOOL_HUB_PORT` are read by `scripts/config.py`.
 See `.env.example` for the supported names.
 
 ## Next reading
 
+- [Deployment and GitHub Pages](deployment.md)
 - [Architecture](architecture.md)
 - [Data model](data-model.md)
 - [Contributing](../CONTRIBUTING.md)

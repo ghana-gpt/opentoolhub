@@ -66,6 +66,16 @@ Browsers cannot fetch `../data/*.json` from a served `site/` directory, so
 `scripts/build_site.py` copies the files to `site/data/` and `--check` detects a
 stale copy. The same script serves `site/` with cache disabled for local work.
 
+### Deployment
+
+GitHub Pages publishes the `site/` directory, not the repository root.
+`.github/workflows/pages.yml` validates the data, runs the tests, stages
+`site/data/`, verifies the artifact, and uploads it with the official Pages
+actions. Because `site/data/` is generated and gitignored, the build step is
+mandatory on every deployment. Page URLs and fetches are relative so the same
+artifact works at `http://127.0.0.1:8000/` and under the `/opentoolhub/` Pages
+prefix. See [deployment.md](deployment.md) for commands and troubleshooting.
+
 ### Tests and CI
 
 `tests/` covers data validation, ranking and aliases, CLI exit codes and JSON,
