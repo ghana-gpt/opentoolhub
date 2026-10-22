@@ -3,41 +3,76 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>OpenToolHub | Stacks</title>
+    <title>Stacks | OpenToolHub</title>
     <meta
       name="description"
-      content="Discover practical stack combinations for travel, city dashboards, AI workflows, and startup MVPs."
+      content="Browse OpenToolHub stacks: concrete tool combinations for travel, civic, health, AI, and startup use cases, with difficulty ratings and APIs."
     />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
     <header class="site-header">
       <div class="container nav-bar">
         <a href="index.html" class="brand">OpenToolHub</a>
-        <nav class="nav-links">
-          <a href="index.html">Home</a>
+        <nav class="nav-links" aria-label="Primary">
+          <a href="index.html">Build</a>
           <a href="use-cases.html">Use cases</a>
-          <a href="stacks.html">Stacks</a>
+          <a href="stacks.html" aria-current="page">Stacks</a>
           <a href="templates.html">Templates</a>
+          <a href="apis.html">APIs</a>
         </nav>
         <a class="button primary" href="https://github.com/ghana-gpt/opentoolhub">GitHub</a>
       </div>
     </header>
 
-    <main class="page-shell">
-      <section class="page-header container">
-        <span class="eyebrow">Stack library</span>
-        <h1>Use-ready combinations for common product ideas.</h1>
-        <p>
-          These stack suggestions highlight which categories work well together in real workflows.
-        </p>
-      </section>
+    <main id="main" class="page-shell">
+      <div class="container">
+        <header class="page-header">
+          <span class="eyebrow">Catalog</span>
+          <h1>Stacks</h1>
+          <p class="lead">
+            A stack is a small set of tools with a job for each slot. Difficulty
+            reflects setup and maintenance, not how impressive the result looks.
+          </p>
+        </header>
 
-      <section class="container">
-        <div id="stacks-grid" class="grid three"></div>
-      </section>
+        <div class="controls" role="search" aria-label="Filter stacks">
+          <div class="field inline">
+            <label for="stack-search">Search stacks</label>
+            <input
+              id="stack-search"
+              class="input"
+              type="search"
+              placeholder="weather, maps, database…"
+              autocomplete="off"
+            />
+          </div>
+          <div class="field inline">
+            <label for="difficulty-filter">Difficulty</label>
+            <select id="difficulty-filter" class="select"></select>
+          </div>
+          <button type="button" id="clear-stacks" class="button secondary">
+            Clear filters
+          </button>
+        </div>
+
+        <p id="stack-count" class="results-count" aria-live="polite"></p>
+        <div id="stack-grid" class="grid two"></div>
+      </div>
     </main>
 
-    <script src="app.js"></script>
+    <footer class="site-footer">
+      <div class="container footer-grid">
+        <p>OpenToolHub maps public tools to real projects.</p>
+        <p class="small muted">
+          Stacks are defined in <code>data/stacks.json</code> and validated
+          against the API catalog on every build.
+        </p>
+      </div>
+    </footer>
+
+    <script type="module" src="js/stacks.js"></script>
   </body>
 </html>

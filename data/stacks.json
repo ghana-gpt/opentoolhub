@@ -3,12 +3,28 @@
     "id": "travel-stack",
     "use_case": "travel-planner",
     "name": "Travel planner stack",
-    "categories": ["maps", "weather", "local-discovery"],
-    "recommended_tools": [
-      "map service",
-      "weather API",
-      "local places feed",
-      "currency or travel data source"
+    "categories": ["maps", "weather", "local-discovery", "finance-data"],
+    "tools": [
+      {
+        "slot": "Map service",
+        "category": "maps",
+        "api_ids": ["openstreetmap", "google-maps"]
+      },
+      {
+        "slot": "Weather forecast",
+        "category": "weather",
+        "api_ids": ["openweather", "open-meteo"]
+      },
+      {
+        "slot": "Local places and attractions",
+        "category": "local-discovery",
+        "api_ids": ["overpass", "foursquare"]
+      },
+      {
+        "slot": "Currency and cost data",
+        "category": "finance-data",
+        "api_ids": ["frankfurter"]
+      }
     ],
     "notes": "Best for trip planning and destination-aware experiences.",
     "difficulty": "medium",
@@ -18,13 +34,33 @@
     "id": "city-dashboard-stack",
     "use_case": "city-dashboard",
     "name": "City dashboard stack",
-    "categories": ["maps", "public-data", "local-discovery", "weather"],
-    "recommended_tools": [
-      "map service",
-      "local event feed",
-      "public data source",
-      "weather API",
-      "alert feed"
+    "categories": ["maps", "public-data", "local-discovery", "weather", "news-and-sources"],
+    "tools": [
+      {
+        "slot": "Map service",
+        "category": "maps",
+        "api_ids": ["openstreetmap", "google-maps"]
+      },
+      {
+        "slot": "Local events and places",
+        "category": "local-discovery",
+        "api_ids": ["overpass", "foursquare"]
+      },
+      {
+        "slot": "Public data feed",
+        "category": "public-data",
+        "api_ids": ["worldbank", "data-gov"]
+      },
+      {
+        "slot": "Weather and conditions",
+        "category": "weather",
+        "api_ids": ["open-meteo", "openweather"]
+      },
+      {
+        "slot": "Local news and alerts",
+        "category": "news-and-sources",
+        "api_ids": ["gdelt", "newsapi"]
+      }
     ],
     "notes": "Best for local information dashboards and neighborhood discovery tools.",
     "difficulty": "medium",
@@ -33,49 +69,130 @@
   {
     "id": "ai-research-stack",
     "use_case": "ai-research-assistant",
-    "name": "AI research workflow stack",
+    "name": "AI research stack",
     "categories": ["ai-workflows", "search-and-retrieval", "news-and-sources"],
-    "recommended_tools": [
-      "retrieval layer",
-      "search API",
-      "summarization tool",
-      "knowledge source",
-      "orchestration layer"
+    "tools": [
+      {
+        "slot": "Search and retrieval",
+        "category": "search-and-retrieval",
+        "api_ids": ["openalex", "crossref"]
+      },
+      {
+        "slot": "News and current sources",
+        "category": "news-and-sources",
+        "api_ids": ["gdelt", "newsapi"]
+      },
+      {
+        "slot": "Summarization and reasoning",
+        "category": "ai-workflows",
+        "api_ids": ["openai", "huggingface-inference"]
+      }
     ],
-    "notes": "Best for research assistants, search-powered Q&A, and information workflows.",
-    "difficulty": "medium",
-    "best_for": ["AI tools", "research products", "answer engines"]
+    "notes": "Best for research workflows that need retrieval before generation.",
+    "difficulty": "high",
+    "best_for": ["research assistants", "answer engines", "knowledge tools"]
   },
   {
     "id": "public-health-stack",
     "use_case": "public-health-platform",
-    "name": "Public health reporting stack",
-    "categories": ["health-data", "public-data", "maps", "weather"],
-    "recommended_tools": [
-      "health dataset",
-      "environmental data feed",
-      "map service",
-      "dashboard layer",
-      "alert source"
+    "name": "Public health stack",
+    "categories": ["health-data", "public-data", "maps", "weather", "news-and-sources"],
+    "tools": [
+      {
+        "slot": "Public health dataset",
+        "category": "health-data",
+        "api_ids": ["who-gho", "cdc-data"]
+      },
+      {
+        "slot": "Environmental conditions",
+        "category": "weather",
+        "api_ids": ["open-meteo", "openweather"]
+      },
+      {
+        "slot": "Map and local context",
+        "category": "maps",
+        "api_ids": ["openstreetmap", "google-maps"]
+      },
+      {
+        "slot": "Community data source",
+        "category": "public-data",
+        "api_ids": ["data-gov", "worldbank"]
+      },
+      {
+        "slot": "Health updates and alerts",
+        "category": "news-and-sources",
+        "api_ids": ["gdelt", "newsapi"]
+      }
     ],
-    "notes": "Best for public-interest tools and community reporting workflows.",
-    "difficulty": "medium",
-    "best_for": ["health dashboards", "public-interest products", "civic tools"]
+    "notes": "Best for public-interest reporting where source dates and context matter.",
+    "difficulty": "high",
+    "best_for": ["public health dashboards", "community reporting", "research tools"]
   },
   {
     "id": "startup-mvp-stack",
     "use_case": "startup-mvp",
     "name": "Startup MVP stack",
-    "categories": ["finance-data", "analytics", "maps", "public-data"],
-    "recommended_tools": [
-      "public dataset",
-      "map service",
-      "analytics tracker",
-      "market feed",
-      "simple dashboard layer"
+    "categories": ["finance-data", "analytics", "maps", "public-data", "local-discovery"],
+    "tools": [
+      {
+        "slot": "Public dataset",
+        "category": "public-data",
+        "api_ids": ["data-gov", "worldbank"]
+      },
+      {
+        "slot": "Market and pricing data",
+        "category": "finance-data",
+        "api_ids": ["coingecko", "frankfurter"]
+      },
+      {
+        "slot": "Location and place data",
+        "category": "maps",
+        "api_ids": ["openstreetmap", "google-maps"]
+      },
+      {
+        "slot": "Product analytics",
+        "category": "analytics",
+        "api_ids": ["posthog", "umami"]
+      },
+      {
+        "slot": "Local discovery feed",
+        "category": "local-discovery",
+        "api_ids": ["foursquare", "overpass"]
+      }
     ],
-    "notes": "Best for speedy product validation and lean prototype builds.",
+    "notes": "Best for validating an idea before committing to paid infrastructure.",
     "difficulty": "low",
-    "best_for": ["startups", "prototype builders", "lean teams"]
+    "best_for": ["prototypes", "startup MVPs", "product experiments"]
+  },
+  {
+    "id": "public-good-tool-stack",
+    "use_case": "public-good-tool",
+    "name": "Public-good tool stack",
+    "categories": ["public-data", "maps", "local-discovery", "news-and-sources"],
+    "tools": [
+      {
+        "slot": "Open public data",
+        "category": "public-data",
+        "api_ids": ["data-gov", "worldbank"]
+      },
+      {
+        "slot": "Map and location context",
+        "category": "maps",
+        "api_ids": ["openstreetmap"]
+      },
+      {
+        "slot": "Local services and places",
+        "category": "local-discovery",
+        "api_ids": ["overpass", "foursquare"]
+      },
+      {
+        "slot": "Public information feed",
+        "category": "news-and-sources",
+        "api_ids": ["gdelt", "newsapi"]
+      }
+    ],
+    "notes": "Best for civic products that connect existing public information.",
+    "difficulty": "medium",
+    "best_for": ["civic tools", "nonprofit projects", "community portals"]
   }
 ]

@@ -3,41 +3,80 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>OpenToolHub | Templates</title>
+    <title>Templates | OpenToolHub</title>
     <meta
       name="description"
-      content="Browse starter templates for travel apps, city dashboards, AI agents, health tools, and startup prototypes."
+      content="Starter templates for OpenToolHub stacks. Every template maps to a use case and lives in the public repository."
     />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
     <header class="site-header">
       <div class="container nav-bar">
         <a href="index.html" class="brand">OpenToolHub</a>
-        <nav class="nav-links">
-          <a href="index.html">Home</a>
+        <nav class="nav-links" aria-label="Primary">
+          <a href="index.html">Build</a>
           <a href="use-cases.html">Use cases</a>
           <a href="stacks.html">Stacks</a>
-          <a href="templates.html">Templates</a>
+          <a href="templates.html" aria-current="page">Templates</a>
+          <a href="apis.html">APIs</a>
         </nav>
         <a class="button primary" href="https://github.com/ghana-gpt/opentoolhub">GitHub</a>
       </div>
     </header>
 
-    <main class="page-shell">
-      <section class="page-header container">
-        <span class="eyebrow">Templates</span>
-        <h1>Fast-start patterns for real product ideas.</h1>
-        <p>
-          Each template gives a realistic starting point for a product concept without forcing a full custom build from scratch.
-        </p>
-      </section>
+    <main id="main" class="page-shell">
+      <div class="container">
+        <header class="page-header">
+          <span class="eyebrow">Catalog</span>
+          <h1>Templates</h1>
+          <p class="lead">
+            Start from something runnable. Status tells you whether a template
+            is a complete starter or a variant of a larger project.
+          </p>
+        </header>
 
-      <section class="container">
-        <div id="templates-grid" class="grid three"></div>
-      </section>
+        <div class="controls" role="search" aria-label="Filter templates">
+          <div class="field inline">
+            <label for="template-search">Search templates</label>
+            <input
+              id="template-search"
+              class="input"
+              type="search"
+              placeholder="dashboard, weather, assistant…"
+              autocomplete="off"
+            />
+          </div>
+          <div class="field inline">
+            <label for="status-filter">Status</label>
+            <select id="status-filter" class="select">
+              <option value="">Any status</option>
+              <option value="starter">Starter</option>
+              <option value="variant">Variant</option>
+            </select>
+          </div>
+          <button type="button" id="clear-templates" class="button secondary">
+            Clear filters
+          </button>
+        </div>
+
+        <p id="template-count" class="results-count" aria-live="polite"></p>
+        <div id="template-grid" class="grid three"></div>
+      </div>
     </main>
 
-    <script src="app.js"></script>
+    <footer class="site-footer">
+      <div class="container footer-grid">
+        <p>OpenToolHub maps public tools to real projects.</p>
+        <p class="small muted">
+          Templates are plain files in this repository — follow the link to read
+          the code before you copy it.
+        </p>
+      </div>
+    </footer>
+
+    <script type="module" src="js/templates.js"></script>
   </body>
 </html>

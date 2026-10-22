@@ -1,260 +1,32 @@
-* {
-  box-sizing: border-box;
-}
+---
+name: Feature request
+description: Propose a change to the site, CLI, data model, or contributor workflow
+labels: enhancement
+---
 
-:root {
-  --bg: #07111d;
-  --bg-soft: #0f1d2b;
-  --panel: rgba(16, 28, 41, 0.92);
-  --panel-alt: #122437;
-  --text: #ebf3ff;
-  --muted: #b1c7dd;
-  --primary: #72d7ff;
-  --primary-strong: #4bb7f5;
-  --accent: #7ef0b3;
-  --border: rgba(255, 255, 255, 0.08);
-}
+## Problem
 
-html {
-  scroll-behavior: smooth;
-}
+What is hard, missing, or misleading today? Describe the builder need rather
+than a specific implementation.
 
-body {
-  margin: 0;
-  font-family: Arial, Helvetica, sans-serif;
-  background: linear-gradient(180deg, #08141d 0%, #0b1b2a 100%);
-  color: var(--text);
-}
+## Proposed change
 
-.container {
-  width: min(1100px, calc(100% - 32px));
-  margin: 0 auto;
-}
+What should OpenToolHub do instead? Mention the page, CLI command, or data file
+involved when you can.
 
-.hero {
-  padding: 22px 0 60px;
-  background: radial-gradient(circle at top left, rgba(114, 215, 255, 0.18), transparent 38%),
-    radial-gradient(circle at right, rgba(126, 240, 179, 0.12), transparent 30%),
-    var(--bg);
-}
+## Alternatives considered
 
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 10px 0 20px;
-}
+What workarounds or simpler options did you try?
 
-.brand {
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  font-size: 1.2rem;
-}
+## Scope
 
-.nav-links {
-  display: flex;
-  gap: 22px;
-  flex-wrap: wrap;
-}
+- [ ] Data files in `data/`
+- [ ] Recommender in `scripts/recommend.py`
+- [ ] Site in `site/`
+- [ ] Validation, tests, or CI
+- [ ] Documentation
 
-.nav-links a {
-  color: var(--muted);
-  text-decoration: none;
-  font-size: 0.96rem;
-}
+## Additional context
 
-.button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, var(--primary), var(--primary-strong));
-  color: #07141d;
-  text-decoration: none;
-  font-weight: 700;
-  border-radius: 12px;
-  padding: 0.9rem 1.4rem;
-  box-shadow: 0 10px 25px rgba(75, 183, 245, 0.2);
-}
-
-.button.small {
-  padding: 0.7rem 1rem;
-  font-size: 0.9rem;
-}
-
-.button.secondary {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text);
-  box-shadow: none;
-}
-
-.hero-inner {
-  display: grid;
-  grid-template-columns: 1.6fr 0.9fr;
-  gap: 36px;
-  align-items: center;
-  padding-top: 42px;
-}
-
-.eyebrow {
-  display: inline-block;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  font-size: 0.72rem;
-  color: var(--accent);
-  font-weight: 800;
-  margin-bottom: 14px;
-}
-
-.hero-copy h1 {
-  font-size: clamp(2.4rem, 5vw, 4.2rem);
-  line-height: 1.08;
-  margin: 0 0 18px;
-}
-
-.hero-copy p {
-  font-size: 1.05rem;
-  line-height: 1.7;
-  color: var(--muted);
-  max-width: 620px;
-}
-
-.cta-row {
-  display: flex;
-  gap: 16px;
-  margin-top: 26px;
-  flex-wrap: wrap;
-}
-
-.hero-card,
-.card,
-.about-box,
-.stack-item {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  box-shadow: 0 18px 40px rgba(4, 12, 18, 0.22);
-}
-
-.hero-card {
-  padding: 24px;
-}
-
-.hero-card h3 {
-  margin-top: 0;
-  margin-bottom: 18px;
-  font-size: 1.1rem;
-}
-
-.hero-card ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: grid;
-  gap: 12px;
-}
-
-.hero-card li {
-  border: 1px solid var(--border);
-  background: rgba(255,255,255,0.02);
-  border-radius: 10px;
-  padding: 10px 12px;
-  color: var(--muted);
-}
-
-.section {
-  padding: 72px 0;
-}
-
-.alt {
-  background: rgba(255,255,255,0.02);
-}
-
-.section-heading {
-  margin-bottom: 28px;
-}
-
-.section-heading h2 {
-  margin: 0;
-  font-size: clamp(1.8rem, 4vw, 2.7rem);
-}
-
-.grid {
-  display: grid;
-  gap: 22px;
-}
-
-.grid.three {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.card {
-  padding: 22px;
-}
-
-.card h3 {
-  margin-top: 0;
-  margin-bottom: 12px;
-  font-size: 1.18rem;
-}
-
-.card p {
-  margin: 0;
-  color: var(--muted);
-  line-height: 1.7;
-}
-
-.stack-list {
-  display: grid;
-  gap: 14px;
-}
-
-.stack-item {
-  display: flex;
-  justify-content: space-between;
-  gap: 20px;
-  align-items: center;
-  padding: 16px 18px;
-  color: var(--muted);
-}
-
-.stack-item strong {
-  color: var(--text);
-}
-
-.about-box {
-  display: grid;
-  grid-template-columns: 1.1fr 1.4fr;
-  gap: 24px;
-  padding: 26px;
-  align-items: center;
-}
-
-.about-box p {
-  margin: 0;
-  line-height: 1.7;
-  color: var(--muted);
-}
-
-@media (max-width: 800px) {
-  .hero-inner,
-  .about-box,
-  .grid.three {
-    grid-template-columns: 1fr;
-  }
-
-  .topbar {
-    flex-wrap: wrap;
-  }
-
-  .nav-links {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .stack-item {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-}
+Links, sketches, or examples are welcome. Please do not include API keys or
+other secrets.

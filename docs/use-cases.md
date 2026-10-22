@@ -159,14 +159,44 @@ Startups and builders need to prototype quickly without building every feature f
 ### Why it matters
 This use case is the practical bridge between open public tools and fast product experimentation.
 
+## Use case 6: Public-interest and civic tools
+
+### Problem
+Civic teams, nonprofits, and community builders need to turn scattered public
+information into something residents can actually use.
+
+### Typical goals
+- help people find local services and public information
+- combine open datasets with maps and local context
+- surface relevant public updates without building a newsroom
+- give a community a maintainable information portal
+
+### Typical tool categories
+- public datasets
+- maps and geolocation
+- local discovery and points of interest
+- news and public information feeds
+
+### Example stack
+- an open data source such as Data.gov or the World Bank
+- a map and location layer
+- a local services or places source
+- a public information or news feed
+
+### Why it matters
+This use case keeps the project grounded in public value rather than novelty: the
+result should help someone answer a real question about their own community.
+
 ## How OpenToolHub uses these use cases
 
-Each use case will be connected to:
+Each use case in `data/use-cases.json` is connected to:
 
 - relevant categories
-- suggested stack combinations
+- a stack with alternative APIs per slot
 - starter templates
-- example flows
-- community notes and example projects
+- a worked example
+- the site and CLI that resolve a query to all of the above
 
-This turns OpenToolHub into a practical builder platform instead of a static listing of tools.
+To see the current list, run `python3 scripts/recommend.py --list` or browse the
+[use case index](../site/use-cases.html). The data model is documented in
+[data-model.md](data-model.md).

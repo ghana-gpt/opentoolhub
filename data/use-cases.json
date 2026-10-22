@@ -4,47 +4,77 @@
     "name": "Travel and local discovery",
     "summary": "Useful for trip planning, local discovery, and destination exploration.",
     "goal": "Help people understand where to go and what matters when they arrive.",
-    "categories": ["maps", "weather", "local-discovery"],
-    "starter_template": "travel-app"
+    "aliases": ["travel app", "trip planner", "trip planning", "travel planning", "destination guide"],
+    "keywords": ["itinerary", "destination", "tourist", "sightseeing", "trip", "places"],
+    "categories": ["maps", "weather", "local-discovery", "finance-data"],
+    "stack_ids": ["travel-stack"],
+    "template_ids": ["travel-app"],
+    "example": "examples/travel-planner.md",
+    "personas": ["solo developer", "startup founder", "student"]
   },
   {
     "id": "city-dashboard",
     "name": "City dashboard",
     "summary": "Useful for local insight, city information, and community-oriented experiences.",
     "goal": "Give users a useful overview of local conditions and important city context.",
-    "categories": ["maps", "public-data", "local-discovery", "weather"],
-    "starter_template": "city-dashboard"
+    "aliases": ["city app", "local dashboard", "city information dashboard", "community dashboard", "neighborhood dashboard"],
+    "keywords": ["city", "neighborhood", "local events", "public information", "alerts", "community"],
+    "categories": ["maps", "public-data", "local-discovery", "weather", "news-and-sources"],
+    "stack_ids": ["city-dashboard-stack"],
+    "template_ids": ["city-dashboard", "public-data-dashboard"],
+    "example": "examples/city-dashboard.md",
+    "personas": ["civic team", "developer", "community builder"]
   },
   {
     "id": "ai-research-assistant",
     "name": "AI research assistant",
     "summary": "Useful for search, answer generation, summarization, and research support.",
     "goal": "Turn public information into a useful and well-structured workflow.",
+    "aliases": ["ai assistant", "research assistant", "ai research workflow", "research tool", "answer engine"],
+    "keywords": ["research", "summarize", "search", "retrieval", "citations", "assistant"],
     "categories": ["ai-workflows", "search-and-retrieval", "news-and-sources"],
-    "starter_template": "ai-agent"
+    "stack_ids": ["ai-research-stack"],
+    "template_ids": ["ai-agent"],
+    "example": "examples/ai-research-assistant.md",
+    "personas": ["ai builder", "researcher", "student"]
   },
   {
     "id": "public-health-platform",
     "name": "Public health and community reporting",
     "summary": "Useful for community health, public conditions, and reporting dashboards.",
     "goal": "Help people access useful public-health and local condition information.",
-    "categories": ["health-data", "public-data", "maps", "weather"],
-    "starter_template": "public-health-tracker"
+    "aliases": ["public health tracker", "health dashboard", "community health tool", "health reporting", "public health app"],
+    "keywords": ["health", "community health", "reporting", "alerts", "public data", "environment"],
+    "categories": ["health-data", "public-data", "maps", "weather", "news-and-sources"],
+    "stack_ids": ["public-health-stack"],
+    "template_ids": ["public-health-tracker"],
+    "example": "examples/public-health-tracker.md",
+    "personas": ["public-interest builder", "researcher", "nonprofit team"]
   },
   {
     "id": "startup-mvp",
     "name": "Startup MVP and prototype validation",
     "summary": "Useful for validating ideas using public data and minimal infrastructure.",
     "goal": "Prototype a product idea quickly with the smallest reliable stack.",
-    "categories": ["finance-data", "analytics", "maps", "public-data"],
-    "starter_template": "startup-mvp"
+    "aliases": ["startup app", "mvp", "prototype", "product validation", "startup prototype"],
+    "keywords": ["prototype", "validate", "mvp", "market data", "analytics", "lean startup"],
+    "categories": ["finance-data", "analytics", "maps", "public-data", "local-discovery"],
+    "stack_ids": ["startup-mvp-stack"],
+    "template_ids": ["startup-mvp"],
+    "example": "examples/startup-mvp.md",
+    "personas": ["startup founder", "indie developer", "product team"]
   },
   {
     "id": "public-good-tool",
     "name": "Public-interest and civic tool",
     "summary": "Useful for community updates, public information systems, and local service discovery.",
     "goal": "Make useful information easier to find, interpret, and act on.",
+    "aliases": ["public good app", "civic tool", "civic app", "community tool", "public information tool"],
+    "keywords": ["civic", "community", "public information", "local services", "nonprofit", "public interest"],
     "categories": ["public-data", "maps", "local-discovery", "news-and-sources"],
-    "starter_template": "public-good-tool"
+    "stack_ids": ["public-good-tool-stack"],
+    "template_ids": ["public-good-tool", "civic-dashboard"],
+    "example": "examples/public-good-tool.md",
+    "personas": ["civic team", "nonprofit team", "community builder"]
   }
 ]

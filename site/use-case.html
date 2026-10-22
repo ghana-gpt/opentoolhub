@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Use case | OpenToolHub</title>
+    <meta
+      name="description"
+      content="A complete OpenToolHub path: the problem, the stack, the APIs, a starter template, and a worked example."
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="site-header">
+      <div class="container nav-bar">
+        <a href="index.html" class="brand">OpenToolHub</a>
+        <nav class="nav-links" aria-label="Primary">
+          <a href="index.html">Build</a>
+          <a href="use-cases.html" aria-current="page">Use cases</a>
+          <a href="stacks.html">Stacks</a>
+          <a href="templates.html">Templates</a>
+          <a href="apis.html">APIs</a>
+        </nav>
+        <a class="button primary" href="https://github.com/ghana-gpt/opentoolhub">GitHub</a>
+      </div>
+    </header>
+
+    <main id="main" class="page-shell">
+      <div class="container">
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+          <a href="use-cases.html">Use cases</a>
+          <span aria-hidden="true">/</span>
+          <span id="use-case-crumb">Loading…</span>
+        </nav>
+        <div id="use-case-detail" aria-live="polite"></div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-grid">
+        <p>OpenToolHub maps public tools to real projects.</p>
+        <p class="small muted">
+          Every API listing links to official documentation. Check each
+          provider's terms before shipping.
+        </p>
+      </div>
+    </footer>
+
+    <script type="module" src="js/use-case.js"></script>
+  </body>
+</html>

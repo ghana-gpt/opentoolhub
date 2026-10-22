@@ -1,21 +1,8 @@
----
-name: Feature request
-description: Suggest an idea or enhancement for OpenToolHub
-labels: enhancement
----
-
-## Summary
-
-Describe the feature idea.
-
-## Problem it solves
-
-What need or gap does this address?
-
-## Proposed solution
-
-What would the ideal experience look like?
-
-## Additional context
-
-Add links, references, or examples if useful.
+blank_issues_enabled: false
+contact_links:
+  - name: Getting started and local setup
+    url: https://github.com/ghana-gpt/opentoolhub/blob/main/docs/getting-started.md
+    about: Run the validator, tests, recommender, and static site locally.
+  - name: Data model reference
+    url: https://github.com/ghana-gpt/opentoolhub/blob/main/docs/data-model.md
+    about: Field definitions and invariants for the JSON data layer.

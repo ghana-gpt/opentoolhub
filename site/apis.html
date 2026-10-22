@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>APIs | OpenToolHub</title>
+    <meta
+      name="description"
+      content="Public API catalog with auth, pricing, integration difficulty, and official documentation. Filter by category or pricing model."
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="site-header">
+      <div class="container nav-bar">
+        <a href="index.html" class="brand">OpenToolHub</a>
+        <nav class="nav-links" aria-label="Primary">
+          <a href="index.html">Build</a>
+          <a href="use-cases.html">Use cases</a>
+          <a href="stacks.html">Stacks</a>
+          <a href="templates.html">Templates</a>
+          <a href="apis.html" aria-current="page">APIs</a>
+        </nav>
+        <a class="button primary" href="https://github.com/ghana-gpt/opentoolhub">GitHub</a>
+      </div>
+    </header>
+
+    <main id="main" class="page-shell">
+      <div class="container">
+        <header class="page-header">
+          <span class="eyebrow">Catalog</span>
+          <h1>APIs</h1>
+          <p class="lead">
+            Public interfaces used by the stacks. Pricing and auth labels come
+            from the data file; always confirm current terms with the provider.
+          </p>
+        </header>
+
+        <div class="controls" role="search" aria-label="Filter APIs">
+          <div class="field inline">
+            <label for="api-search">Search APIs</label>
+            <input
+              id="api-search"
+              class="input"
+              type="search"
+              placeholder="weather, maps, payments…"
+              autocomplete="off"
+            />
+          </div>
+          <div class="field inline">
+            <label for="api-category-filter">Category</label>
+            <select id="api-category-filter" class="select"></select>
+          </div>
+          <div class="field inline">
+            <label for="pricing-filter">Pricing</label>
+            <select id="pricing-filter" class="select">
+              <option value="">Any pricing</option>
+              <option value="free">Free</option>
+              <option value="free-tier">Free tier</option>
+              <option value="paid">Paid</option>
+            </select>
+          </div>
+          <button type="button" id="clear-apis" class="button secondary">
+            Clear filters
+          </button>
+        </div>
+
+        <p id="api-count" class="results-count" aria-live="polite"></p>
+        <div id="api-grid" class="grid three"></div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-grid">
+        <p>OpenToolHub maps public tools to real projects.</p>
+        <p class="small muted">
+          No API keys are stored or shipped to the browser. Add credentials to
+          your own environment, never to HTML or JavaScript.
+        </p>
+      </div>
+    </footer>
+
+    <script type="module" src="js/apis.js"></script>
+  </body>
+</html>

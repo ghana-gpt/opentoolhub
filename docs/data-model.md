@@ -1,0 +1,189 @@
+# Data model
+
+Everything the site and CLI show comes from the JSON arrays in `data/`. The
+validator enforces the shape and the cross-references described here. All files
+must contain a JSON array; each object's `id` must be unique within its file and
+match kebab-case (`^[a-z0-9]+(?:-[a-z0-9]+)*$`).
+
+## Files
+
+| File | One object per | Purpose |
+| --- | --- | --- |
+| `categories.json` | Tool category | Groups APIs and gives the builder areas to select |
+| `use-cases.json` | Builder problem | The entry point: goal, keywords, stacks, templates, example |
+| `stacks.json` | Tool combination | One slot per job, with alternative APIs for each slot |
+| `apis.json` | Public API | Official links, auth, pricing, complexity, freshness, notes |
+| `templates.json` | Starter project | A runnable repository path and its status |
+| `examples.json` | Worked example | A walkthrough for exactly one use case |
+
+## Required fields
+
+### Category
+
+```json
+{
+  "id": "weather",
+  "name": "Weather and environment",
+  "description": "Weather, climate, air quality, and environmental monitoring tools.",
+  "tags": ["forecast", "climate", "environment"],
+  "best_for": ["travel tools", "public alerts"],
+  "integration_complexity": "low",
+  "aliases": ["weather", "climate", "forecast"]
+}
+```
+
+`integration_complexity` is `low`, `medium`, or `high`. List fields must be
+non-empty and contain no duplicate strings.
+
+### Use case
+
+```json
+{
+  "id": "travel-planner",
+  "name": "Travel and local discovery",
+  "summary": "Useful for trip planning and destination exploration.",
+  "goal": "Help people understand where to go and what matters when they arrive.",
+  "aliases": ["travel app", "trip planner"],
+  "keywords": ["itinerary", "destination", "places"],
+  "categories": ["maps", "weather", "local-discovery"],
+  "stack_ids": ["travel-stack"],
+  "template_ids": ["travel-app"],
+  "example": "examples/travel-planner.md",
+  "personas": ["solo developer", "startup founder"]
+}
+```
+
+- `categories`, `stack_ids`, and `template_ids` must reference existing ids.
+- `stack_ids` and `template_ids` must each contain at least one entry.
+- `example` must be a real file and must be registered in `examples.json` with
+  `"use_case"` set to this use case's id.
+- Aliases are exact-match search terms; keywords feed partial matching and the
+  search document.
+
+### Stack
+
+```json
+{
+  "id": "travel-stack",
+  "use_case": "travel-planner",
+  "name": "Travel planner stack",
+  "categories": ["maps", "weather", "local-discovery"],
+  "tools": [
+    {
+      "slot": "Map service",
+      "category": "maps",
+      "api_ids": ["openstreetmap", "google-maps"]
+    }
+  ],
+  "notes": "Best for trip planning and destination-aware experiences.",
+  "difficulty": "medium",
+  "best_for": ["travel apps", "local guides"]
+}
+```
+
+- `use_case` must reference a use case that lists this stack in `stack_ids`.
+- Slot names must be unique within a stack.
+- Every `tool.category` must exist, and every API in `api_ids` must include that
+  category in its own `category_ids`.
+- A stack category outside its use case's categories produces a warning, which
+  fails `--strict`.
+
+### API
+
+```json
+{
+  "id": "open-meteo",
+  "name": "Open-Meteo",
+  "url": "https://open-meteo.com/",
+  "docs_url": "https://open-meteo.com/en/docs",
+  "category_ids": ["weather"],
+  "description": "Open weather forecasts and historical weather data.",
+  "best_for": ["weather", "forecasts"],
+  "auth": "none",
+  "pricing": "free-tier",
+  "integration_complexity": "low",
+  "data_freshness": "high",
+  "licensing_notes": "Free for non-commercial use; commercial use needs a key.",
+  "related_tags": ["weather", "forecast"]
+}
+```
+
+| Field | Allowed values |
+| --- | --- |
+| `auth` | `none`, `api-key`, `token` |
+| `pricing` | `free`, `free-tier`, `paid` |
+| `integration_complexity` | `low`, `medium`, `high` |
+| `data_freshness` | `low`, `medium`, `high` |
+
+`url` and `docs_url` must be absolute `http(s)` URLs. Licensing notes should
+state attribution or plan constraints when they are known; do not invent terms.
+
+### Template
+
+```json
+{
+  "id": "travel-app",
+  "name": "Travel app",
+  "description": "Weather, maps, local places, and destination context.",
+  "use_case_ids": ["travel-planner"],
+  "category_ids": ["maps", "weather", "local-discovery"],
+  "tags": ["travel", "maps", "weather"],
+  "path": "templates/travel-app/README.md",
+  "status": "starter"
+}
+```
+
+- `status` is `starter` or `variant`.
+- `path` must start with `templates/` and point to an existing file.
+- Every id in `use_case_ids` must list this template in its `template_ids`
+  (the relationship is checked in both directions).
+- Every directory under `templates/` must have an entry in `templates.json`.
+
+### Example
+
+```json
+{
+  "id": "travel-planner-example",
+  "use_case": "travel-planner",
+  "title": "Travel planner example",
+  "path": "examples/travel-planner.md",
+  "summary": "Plan a trip with weather, maps, local places, and cost context."
+}
+```
+
+`path` must start with `examples/`, exist, and be unique. Every use case must
+have one example.
+
+## Repository-wide invariants
+
+`python3 scripts/validate.py --strict` fails when:
+
+- a required field is missing or has the wrong type;
+- an id is not kebab-case or is duplicated in the same file;
+- a list is empty or contains duplicates or non-strings;
+- an enum value is unsupported;
+- a stack, API, category, template, or example reference does not exist;
+- a reciprocal link is missing (use case ↔ stack, use case ↔ template);
+- an API is used in a tool slot whose category it does not belong to;
+- a template or example path does not exist or starts with the wrong prefix;
+- a category is unused by every use case, or has no APIs;
+- a use case has no stack, template, or registered example.
+
+Warnings (errors under `--strict`) include an unused API, a category with a
+single API and no alternative, a stack category its use case does not list, and
+an example file that exists but is not registered.
+
+## Adding a use case
+
+1. Add the categories or APIs you need first.
+2. Add the use case, stack, template, and example objects with reciprocal ids.
+3. Create `templates/<id>/README.md` and `examples/<id>.md` as referenced.
+4. Run `python3 scripts/validate.py --strict` and fix every message.
+5. Run the recommender with the new id and at least one alias.
+6. Run the tests, stage the site data, and preview the page:
+
+```bash
+python3 -m unittest discover -s tests -v
+python3 scripts/build_site.py --serve
+```
+

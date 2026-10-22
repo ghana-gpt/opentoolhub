@@ -3,41 +3,77 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>OpenToolHub | Use cases</title>
+    <title>Use cases | OpenToolHub</title>
     <meta
       name="description"
-      content="Browse use cases for trips, city dashboards, AI workflows, civic tools, and startup MVPs."
+      content="Browse OpenToolHub use cases by area or keyword. Each use case resolves to a concrete stack, starter templates, and a worked example."
     />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
     <header class="site-header">
       <div class="container nav-bar">
         <a href="index.html" class="brand">OpenToolHub</a>
-        <nav class="nav-links">
-          <a href="index.html">Home</a>
-          <a href="use-cases.html">Use cases</a>
+        <nav class="nav-links" aria-label="Primary">
+          <a href="index.html">Build</a>
+          <a href="use-cases.html" aria-current="page">Use cases</a>
           <a href="stacks.html">Stacks</a>
           <a href="templates.html">Templates</a>
+          <a href="apis.html">APIs</a>
         </nav>
         <a class="button primary" href="https://github.com/ghana-gpt/opentoolhub">GitHub</a>
       </div>
     </header>
 
-    <main class="page-shell">
-      <section class="page-header container">
-        <span class="eyebrow">Use cases</span>
-        <h1>Start with the problem you are trying to solve.</h1>
-        <p>
-          OpenToolHub is organized around builder goals and product ideas, not just raw API catalogues.
-        </p>
-      </section>
+    <main id="main" class="page-shell">
+      <div class="container">
+        <header class="page-header">
+          <span class="eyebrow">Catalog</span>
+          <h1>Use cases</h1>
+          <p class="lead">
+            Start from a problem, not a product. Every use case links to the
+            stack that solves it, the APIs it depends on, and something you can
+            run today.
+          </p>
+        </header>
 
-      <section class="container">
+        <div class="controls" role="search" aria-label="Filter use cases">
+          <div class="field inline">
+            <label for="use-case-search">Search use cases</label>
+            <input
+              id="use-case-search"
+              class="input"
+              type="search"
+              placeholder="weather, civic, assistant…"
+              autocomplete="off"
+            />
+          </div>
+          <div class="field inline">
+            <label for="category-filter">Area</label>
+            <select id="category-filter" class="select"></select>
+          </div>
+          <button type="button" id="clear-use-cases" class="button secondary">
+            Clear filters
+          </button>
+        </div>
+
+        <p id="use-cases-count" class="results-count" aria-live="polite"></p>
         <div id="use-cases-grid" class="grid three"></div>
-      </section>
+      </div>
     </main>
 
-    <script src="app.js"></script>
+    <footer class="site-footer">
+      <div class="container footer-grid">
+        <p>OpenToolHub maps public tools to real projects.</p>
+        <p class="small muted">
+          Data is validated by <code>scripts/validate.py</code>. No tracking and
+          no server secrets in the browser.
+        </p>
+      </div>
+    </footer>
+
+    <script type="module" src="js/use-cases.js"></script>
   </body>
 </html>

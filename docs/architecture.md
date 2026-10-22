@@ -1,65 +1,98 @@
-# Architecture and platform direction
+# Architecture
 
-OpenToolHub is designed as a practical layer between people with ideas and the public tools they can use to build them.
+OpenToolHub is a static, data-driven catalog. There is no application server,
+database, or build framework. The only runtime dependencies are Python's
+standard library for the scripts and a modern browser for the site.
 
-## Core architecture
+## Design rules
 
-### 1. Discovery layer
+1. **`data/` is the single source of truth.** Pages and the CLI render what the
+   JSON contains. No recommendation, stack, or API description is hardcoded in
+   JavaScript or Python.
+2. **Every reference must resolve.** A stack API id, template path, example
+   path, category, and use case link are all checked by
+   `scripts/validate.py`. CI fails on errors and warnings.
+3. **The browser gets public data only.** `site/` contains HTML, CSS, JS, and a
+   generated copy of `data/`. There are no API keys, tokens, or server calls.
+4. **Unknown input is not guessed silently.** The recommender reports the
+   closest alternatives and exits with a distinct code.
+5. **One behavior, two clients.** The site and CLI both match on ids, names,
+   aliases, and keywords from the same files, so a query behaves consistently.
 
-This layer helps users find relevant public tools by:
+## Components
 
-- category
-- use case
-- needs and goals
-- product type
-- AI or no-code readiness
+### Data layer (`data/`)
 
-### 2. Recommendation layer
+Six JSON arrays with cross-references: `categories`, `use-cases`, `stacks`,
+`apis`, `templates`, and `examples`. The schema and invariants are documented in
+[data-model.md](data-model.md).
 
-This layer suggests combinations of tools based on the user's goal.
+### Validator (`scripts/validate.py`)
 
-Examples:
+Loads the files, checks required fields and types, kebab-case ids, enums,
+duplicate ids, cross-references, and filesystem paths. It also rejects
+unregistered use cases and categories that no use case or API uses. Run it with
+`--strict` so warnings fail the build.
 
-- travel planner stack
-- city information dashboard
-- public health tracker
-- AI research assistant
+### Recommender (`scripts/recommend.py`)
 
-### 3. Starter template layer
+Indexes the data, normalizes text (lowercase, accents, punctuation), removes
+filler words, and scores candidates:
 
-This provides ready-made patterns and examples for common product ideas.
+| Match | Score |
+| --- | --- |
+| Exact id | 100 |
+| Exact name | 95 |
+| Exact alias | 90 |
+| All query tokens in the search document | 80–89 |
+| At least half the tokens | 40–79 |
 
-Examples:
+A score below 90 with a runner-up within 5 points sets
+`needs_disambiguation` and includes alternatives. The result resolves stack
+tools to full API records, templates, examples, and a short rationale. The CLI
+exposes text, `--json`, and `--list` modes.
 
-- travel app starter
-- public data dashboard
-- AI agent starter
+### Static site (`site/`)
 
-### 4. Contributor and community layer
+Plain ES modules with no framework:
 
-The project depends on open collaboration:
+- `js/data.js` loads and indexes JSON, normalizes text, and provides lookups.
+- `js/ui.js` holds escaping, URL-state, and badge helpers.
+- `js/render.js` contains reusable card and tool markup.
+- One controller per page: `home.js`, `use-cases.js`, `use-case.js`,
+  `stacks.js`, `templates.js`, and `apis.js`.
 
-- API submissions
-- use-case ideas
-- example projects
-- improvement proposals
-- documentation updates
+Browsers cannot fetch `../data/*.json` from a served `site/` directory, so
+`scripts/build_site.py` copies the files to `site/data/` and `--check` detects a
+stale copy. The same script serves `site/` with cache disabled for local work.
 
-## Why this architecture matters
+### Tests and CI
 
-The project is not trying to be a static directory alone.
-It aims to become a system for translation:
+`tests/` covers data validation, ranking and aliases, CLI exit codes and JSON,
+and static-site integrity (assets, module scripts, selectors, and imports).
+GitHub Actions runs validation with `--strict`, the test suite, staging plus
+`--check`, a recommender smoke test, and JavaScript syntax checks. A separate
+workflow deploys the validated `site/` directory to GitHub Pages.
 
-idea -> tool stack -> working project -> real impact
+## Request flow
 
-## Future direction
+```text
+browser
+  └─ index.html → js/home.js
+       └─ loadData()
+            └─ fetch site/data/{categories,use-cases,stacks,apis,templates,examples}.json
+                 └─ score + render path + template/example links
 
-The next important evolution is to turn the structured JSON into:
+terminal
+  └─ python3 scripts/recommend.py "travel app"
+       └─ load_data() → score → build_recommendation() → text or JSON
+```
 
-- search-driven browsing
-- curated use-case pages
-- dynamic recommendations
-- starter templates with real code
-- AI-powered tool matching
+## Boundaries
 
-This will make OpenToolHub more usable for both humans and AI systems.
+- The project does not host APIs, proxy requests, or store credentials.
+- It does not claim live pricing or uptime; the licensing notes and links are a
+  starting point that must be verified with each provider.
+- It does not generate templates. A template entry is only valid when its path
+  exists in `templates/`.
+- Search is deterministic keyword matching, not a model call.

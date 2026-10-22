@@ -3,42 +3,80 @@
     "id": "travel-app",
     "name": "Travel app",
     "description": "Weather, maps, local places, and destination context in a single flow.",
-    "category": "Travel and local discovery",
-    "tags": ["travel", "maps", "local discovery", "weather"]
+    "use_case_ids": ["travel-planner"],
+    "category_ids": ["maps", "weather", "local-discovery", "finance-data"],
+    "tags": ["travel", "maps", "weather", "itinerary"],
+    "path": "templates/travel-app/README.md",
+    "status": "starter"
   },
   {
     "id": "city-dashboard",
     "name": "City dashboard",
     "description": "A local information system for weather, community updates, maps, and public context.",
-    "category": "City dashboards",
-    "tags": ["city", "maps", "public data", "alerts"]
+    "use_case_ids": ["city-dashboard"],
+    "category_ids": ["maps", "public-data", "local-discovery", "weather", "news-and-sources"],
+    "tags": ["city", "maps", "public-data", "alerts"],
+    "path": "templates/city-dashboard/README.md",
+    "status": "starter"
   },
   {
     "id": "ai-agent",
     "name": "AI agent",
     "description": "Research, summarization, retrieval, and tool-based workflows for smarter answers.",
-    "category": "AI workflows",
-    "tags": ["ai", "research", "retrieval", "workflow"]
+    "use_case_ids": ["ai-research-assistant"],
+    "category_ids": ["ai-workflows", "search-and-retrieval", "news-and-sources"],
+    "tags": ["ai", "research", "retrieval", "workflow"],
+    "path": "templates/ai-agent/README.md",
+    "status": "starter"
   },
   {
     "id": "public-health-tracker",
     "name": "Public health tracker",
     "description": "Community health, alerts, and public-interest reporting in a clear dashboard.",
-    "category": "Health and civic tools",
-    "tags": ["health", "public data", "dashboard", "community"]
+    "use_case_ids": ["public-health-platform"],
+    "category_ids": ["health-data", "public-data", "maps", "weather", "news-and-sources"],
+    "tags": ["health", "public-data", "dashboard", "community"],
+    "path": "templates/public-health-tracker/README.md",
+    "status": "starter"
   },
   {
     "id": "startup-mvp",
     "name": "Startup MVP",
     "description": "Lean product validation using open data, maps, and a minimal stack.",
-    "category": "Startup validation",
-    "tags": ["startup", "prototype", "analytics", "market"]
+    "use_case_ids": ["startup-mvp"],
+    "category_ids": ["finance-data", "analytics", "maps", "public-data", "local-discovery"],
+    "tags": ["startup", "prototype", "analytics", "market"],
+    "path": "templates/startup-mvp/README.md",
+    "status": "starter"
   },
   {
     "id": "public-good-tool",
     "name": "Public-good tool",
     "description": "A local or civic product that helps people find and act on relevant public information.",
-    "category": "Public-interest tools",
-    "tags": ["civic", "public data", "community", "discovery"]
+    "use_case_ids": ["public-good-tool"],
+    "category_ids": ["public-data", "maps", "local-discovery", "news-and-sources"],
+    "tags": ["civic", "public-data", "community", "discovery"],
+    "path": "templates/public-good-tool/README.md",
+    "status": "starter"
+  },
+  {
+    "id": "civic-dashboard",
+    "name": "Civic dashboard",
+    "description": "A community dashboard that combines public information, neighborhood context, and updates.",
+    "use_case_ids": ["public-good-tool"],
+    "category_ids": ["public-data", "maps", "local-discovery", "news-and-sources"],
+    "tags": ["civic", "dashboard", "community", "local"],
+    "path": "templates/civic-dashboard/README.md",
+    "status": "variant"
+  },
+  {
+    "id": "public-data-dashboard",
+    "name": "Public data dashboard",
+    "description": "A civic-tech dashboard for open datasets, map layers, public metrics, and trends.",
+    "use_case_ids": ["city-dashboard"],
+    "category_ids": ["public-data", "maps", "weather", "analytics"],
+    "tags": ["open-data", "dashboard", "transparency", "maps"],
+    "path": "templates/public-data-dashboard/README.md",
+    "status": "variant"
   }
 ]

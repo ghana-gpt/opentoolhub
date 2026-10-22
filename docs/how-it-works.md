@@ -33,6 +33,7 @@ OpenToolHub organizes ideas around a few core patterns, such as:
 - travel and local discovery
 - city dashboards
 - public-health and community tools
+- public-interest and civic tools
 - AI research workflows
 - startup experimentation
 

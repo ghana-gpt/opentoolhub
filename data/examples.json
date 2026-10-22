@@ -1,0 +1,44 @@
+[
+  {
+    "id": "travel-planner-example",
+    "use_case": "travel-planner",
+    "title": "Travel planner example",
+    "path": "examples/travel-planner.md",
+    "summary": "Plan a trip with weather, maps, local places, and cost context in one flow."
+  },
+  {
+    "id": "city-dashboard-example",
+    "use_case": "city-dashboard",
+    "title": "City dashboard example",
+    "path": "examples/city-dashboard.md",
+    "summary": "Combine maps, local updates, weather, and public data into a city overview."
+  },
+  {
+    "id": "ai-research-assistant-example",
+    "use_case": "ai-research-assistant",
+    "title": "AI research assistant example",
+    "path": "examples/ai-research-assistant.md",
+    "summary": "Gather, summarize, and compare information from public sources with citations."
+  },
+  {
+    "id": "public-health-tracker-example",
+    "use_case": "public-health-platform",
+    "title": "Public health tracker example",
+    "path": "examples/public-health-tracker.md",
+    "summary": "Track public-health and environmental conditions with local context."
+  },
+  {
+    "id": "startup-mvp-example",
+    "use_case": "startup-mvp",
+    "title": "Startup MVP example",
+    "path": "examples/startup-mvp.md",
+    "summary": "Validate a product idea with open data, maps, and lightweight analytics."
+  },
+  {
+    "id": "public-good-tool-example",
+    "use_case": "public-good-tool",
+    "title": "Public-good tool example",
+    "path": "examples/public-good-tool.md",
+    "summary": "Help residents find local services and public information in one place."
+  }
+]

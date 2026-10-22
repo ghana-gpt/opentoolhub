@@ -44,16 +44,23 @@ A public tool directory helps with lookup. A recommendation engine helps with de
 
 The project aims to move users from raw discovery to better product judgment.
 
-## Future direction
+## Implemented today
 
-The next version of the project should support:
+The current recommender (`scripts/recommend.py`) is deterministic and data
+driven. It scores ids, names, aliases, and keyword coverage from `data/`, then
+resolves the winning use case to its stack, APIs, templates, examples, and
+rationale. Ambiguous matches return alternatives. It does not call a model and
+does not rank providers by quality.
 
-- stack matching by use case
-- comparison pages between overlapping tools
-- project-specific recommendations
-- filtering by builder persona
-- public-interest and civic recommendations
-- AI tool readiness and workflow suitability
-- community-submitted examples and scoring
+## Not implemented yet
 
-That is where OpenToolHub becomes meaningfully more advanced than a simple directory.
+These are design goals, not current behavior:
+
+- per-tool quality or reliability scores
+- regional coverage comparison
+- comparison pages between overlapping APIs
+- persona-based filtering beyond catalog text
+- community scoring or submitted rankings
+
+The data model already records integration complexity, pricing, auth, and data
+freshness so these comparisons can be added without inventing values later.

@@ -1,31 +1,43 @@
 # OpenToolHub data
 
-This folder stores the structured metadata that powers the project's discovery layer.
+This folder is the single source of truth for the catalog. The Python
+recommender, the validator, and the static site all read these files; the site
+gets a staged copy at `site/data/` because browsers cannot read outside the
+served directory.
 
-The goal is to turn the repository from a static list into a practical recommendation system for real-world use cases.
+Every file is a JSON array of objects with a unique kebab-case `id`. The full
+field list, enums, and cross-file rules are in
+[docs/data-model.md](../docs/data-model.md).
 
 ## Files
 
-- `categories.json` — API categories and topic groupings
-- `use-cases.json` — common ideas and product goals
-- `stacks.json` — curated combinations of tools and APIs
-- `apis.json` — machine-readable API metadata
+- `apis.json` — public APIs, official links, auth, pricing, and freshness
+- `categories.json` — tool categories used by APIs, stacks, and the builder
+- `examples.json` — worked walkthroughs, one per use case
+- `stacks.json` — tool combinations with alternatives in every slot
+- `templates.json` — starter and variant projects under `templates/`
+- `use-cases.json` — the entry point: goals, keywords, aliases, and references
 
-## Data philosophy
+`README.md` (this file) is documentation, not catalog data.
 
-The data model should help answer questions like:
+## How the data is used
 
-- what tools fit a travel app?
-- which APIs are best for a public dashboard?
-- what stack supports a civic-tech project?
-- which tools are AI-ready or no-code friendly?
+- `scripts/validate.py --strict` checks required fields, enums, unique ids,
+  reciprocal references, and file paths.
+- `scripts/recommend.py` resolves a plain-language goal to one use case, then
+  prints its stack, APIs, templates, and example.
+- `site/js/data.js` loads the staged copy and applies keyword matching and
+  category filters in the browser.
 
-## Future use
+## Changing data
 
-This folder is designed to support:
+1. Read [docs/data-model.md](../docs/data-model.md) first.
+2. Keep both sides of every relationship: use case ↔ stack and use case ↔
+   template.
+3. Run the checks before opening a pull request:
 
-- search and filtering
-- recommendation systems
-- use-case-driven discovery
-- AI and agent integration
-- community-curated stacks and examples
+```bash
+python3 scripts/validate.py --strict
+python3 -m unittest discover -s tests -v
+python3 scripts/build_site.py --check
+```

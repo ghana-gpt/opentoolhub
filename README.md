@@ -1,128 +1,141 @@
 # OpenToolHub
 
-OpenToolHub helps people discover the right public tools for the project they want to build.
+OpenToolHub turns a project idea into a concrete build path:
 
-Instead of looking at a long list of APIs and wondering where to start, people can begin with a real goal: a travel app, a city dashboard, an AI assistant, a public-health tracker, or a startup MVP. From there, OpenToolHub points toward the kinds of public tools and combinations that actually fit the idea.
+**idea → use case → categories → stack → template → worked example**
 
-## Why this exists
+The catalog is versioned JSON, validated in CI and consumed by two clients: a
+static site with no backend and a Python recommender that uses only the
+standard library. There are no fakes in the catalog: every API links to its
+official site and docs, and every template and example path exists in this
+repository.
 
-There are already many public tools online, but they are often hard to compare and harder to connect into a real workflow. The problem is not access; it is direction.
+## What the project actually does
 
-Most people do not need another raw directory. They need a better way to answer a simple question:
+- Keeps six builder-focused use cases, each with a stack, categories, templates,
+  and a worked example.
+- Resolves a plain-language goal ("travel app", "civic tool") to one use case
+  using ids, names, aliases, and keywords from `data/`.
+- Shows the real trade-offs: auth type, pricing model, integration complexity,
+  and data freshness for every API.
+- Ships a static site that works without a server language, plus a CLI that
+  prints either readable text or JSON.
+- Refuses to guess silently: unknown queries exit with a useful message and a
+  list of valid use cases.
 
-What should I use to build this?
+## Quick start
 
-## What OpenToolHub does
+Requirements: Python 3.10 or newer (CI uses 3.12). No third-party packages.
 
-OpenToolHub connects real-world product ideas to practical tool categories and starter stacks.
+```bash
+python3 scripts/validate.py --strict
+python3 -m unittest discover -s tests -v
+python3 scripts/build_site.py --serve
+```
 
-We focus on use cases such as:
+Then open <http://127.0.0.1:8000/>. The last command validates nothing by
+itself, so run the validator first when you have edited data.
 
-- travel and local discovery
-- city dashboards and community tools
-- public-health and civic systems
-- AI research and assistant workflows
-- startup MVPs and prototype products
+`build_site.py` copies `data/*.json` into `site/data/` because browsers cannot
+load files outside the directory they are served from. `site/data/` is generated
+and gitignored. To check whether the staged copy is current without writing:
 
-This makes the project more useful than a simple API catalogue because it organizes tools around actual problems people want to solve.
+```bash
+python3 scripts/build_site.py --check
+```
 
-## How the project works
+## Recommender CLI
 
-The project is built around a simple flow:
+```bash
+# Human-readable path
+python3 scripts/recommend.py "travel app"
 
-1. Start with a real problem or idea.
-2. Match it to a use case.
-3. Find the right categories of public tools.
-4. Explore a suggested stack.
-5. Use a starter template to get moving quickly.
+# Exact id
+python3 scripts/recommend.py public-health-platform
 
-This keeps the project practical and helpful for people who are trying to build something real.
+# Machine-readable output
+python3 scripts/recommend.py --json "civic tool"
 
-## Current direction
+# Every use case
+python3 scripts/recommend.py --list
+```
 
-The project focuses on a small set of builder-friendly use cases:
+Exit codes:
 
-- travel and local information tools
-- city dashboards and public data experiences
-- health and public-interest products
-- AI workflows and research helpers
-- startup product validation
+| Code | Meaning |
+| --- | --- |
+| `0` | A recommendation or list was printed |
+| `1` | Data files could not be loaded |
+| `2` | Missing or unknown query |
 
-Each area is treated as a way to discover relevant public tools, stack patterns, and starter workflows.
+An ambiguous match still exits `0` but prints the alternatives and a hint to use
+a more specific phrase or an id.
 
-## Repository structure
+## Site
+
+| Page | Purpose |
+| --- | --- |
+| `index.html` | Idea, area, and experience form; renders a path from the data |
+| `use-cases.html` | Search and filter every use case |
+| `use-case.html?id=…` | One path with stacks, API links, templates, and its example |
+| `stacks.html` | Tool combinations with difficulty and per-slot APIs |
+| `templates.html` | Starter and variant templates, linked to repository files |
+| `apis.html` | API catalog with category, pricing, auth, and freshness details |
+
+The builder keeps its state in the URL (`q`, `areas`, `level`), and the catalog
+pages keep filters in the URL too, so a view can be linked or reloaded. All
+rendered text passes through an HTML escaper; user input is never inserted as
+markup. The site makes no network requests except for the staged JSON files.
+
+## Repository layout
 
 ```text
 .
-├── README.md
-├── CONTRIBUTING.md
-├── LICENSE
-├── docs/
-│   ├── architecture-overview.md
-│   ├── building-with-public-tools.md
-│   ├── community.md
-│   ├── contribute-stacks.md
-│   ├── featured-stacks.md
-│   ├── featured-use-cases.md
-│   ├── how-it-works.md
-│   ├── launch-announcement.md
-│   ├── product-story.md
-│   ├── project-pitch.md
-│   └── roadmap-2026.md
-├── examples/
+├── data/                      # Validated JSON: the single source of truth
+│   ├── apis.json
+│   ├── categories.json
+│   ├── examples.json
+│   ├── stacks.json
+│   ├── templates.json
+│   └── use-cases.json
+├── docs/                      # Architecture, data model, guides
+├── examples/                  # Worked walkthroughs referenced by examples.json
+├── scripts/
+│   ├── build_site.py          # Stage site/data, check staleness, serve locally
+│   ├── config.py              # Paths and host/port settings
+│   ├── recommend.py           # Stdlib recommender and CLI
+│   └── validate.py            # Schema, reference, and path validation
 ├── site/
-│   ├── index.html
-│   └── styles.css
-├── templates/
-│   ├── ai-agent/
-│   ├── civic-dashboard/
-│   ├── city-dashboard/
-│   ├── public-good-tool/
-│   ├── public-health-tracker/
-│   ├── startup-mvp/
-│   └── travel-app/
-├── .github/
-│   └── ISSUE_TEMPLATE/
-│       ├── stack_request.md
-│       ├── use_case_request.md
-├── LICENSE
-└── .gitignore
+│   ├── *.html                 # One page per view
+│   ├── js/                    # ES modules: data access, UI, page controllers
+│   ├── styles.css
+│   └── data/                  # Generated by build_site.py (gitignored)
+├── templates/                 # Starter projects referenced by templates.json
+├── tests/                     # Data, recommender, CLI, and static-site tests
+└── .github/workflows/         # CI and GitHub Pages deployment
 ```
 
-## What makes it different
+## Documentation
 
-OpenToolHub is not trying to be a copy of any existing repo. It is trying to be a different kind of resource: one that helps builders understand how public tools fit together in practice.
+- [Data model](docs/data-model.md) — fields, enums, cross-references, and
+  invariants enforced by the validator.
+- [Architecture](docs/architecture.md) — how the data, CLI, and static site fit
+  together.
+- [Getting started](docs/getting-started.md) — local workflow and first tasks.
+- [Contributing](CONTRIBUTING.md) — what makes a good data or template change.
 
-We care about:
+## Validate before you push
 
-- real product use cases
-- practical stack combinations
-- easier discovery for public tools
-- building with real-world constraints in mind
-- helping people move faster from idea to prototype
+```bash
+python3 scripts/validate.py --strict
+python3 -m unittest discover -s tests -v
+python3 scripts/build_site.py --check
+```
 
-## Contribute
-
-We welcome contributions from developers, designers, AI builders, researchers, students, public-interest builders, and anyone interested in useful digital products.
-
-You can help by:
-
-- suggesting a new use case
-- adding a stack recommendation
-- creating a starter template
-- improving documentation
-- sharing practical examples from real work
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+CI runs those checks on every pull request, then performs a recommender smoke
+test. The Pages workflow validates the data, stages it, and deploys `site/` only
+after validation passes.
 
 ## License
 
-This project is licensed under the MIT License.
-
-## Final thought
-
-OpenToolHub is meant to be a practical builder tool: a place to understand what public tools exist, what they are useful for, and how to combine them into something real.
-
-That is the long-term aim of the project.
-
-Built for builders, communities, and useful digital work.
+MIT. See [LICENSE](LICENSE).

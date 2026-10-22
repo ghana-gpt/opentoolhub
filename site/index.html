@@ -3,94 +3,139 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>OpenToolHub | Builder-first public tool discovery</title>
+    <title>OpenToolHub | Start with an idea, leave with a stack</title>
     <meta
       name="description"
-      content="OpenToolHub helps builders discover the right public tools, stacks, and starter templates for real projects and AI workflows."
+      content="Describe a project idea and get a practical stack of public APIs, starter templates, and worked examples. Builder-first discovery for travel, civic, health, AI, and startup projects."
     />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
     <header class="site-header">
       <div class="container nav-bar">
         <a href="index.html" class="brand">OpenToolHub</a>
-        <nav class="nav-links">
-          <a href="index.html">Home</a>
+        <nav class="nav-links" aria-label="Primary">
+          <a href="index.html" aria-current="page">Build</a>
           <a href="use-cases.html">Use cases</a>
           <a href="stacks.html">Stacks</a>
           <a href="templates.html">Templates</a>
+          <a href="apis.html">APIs</a>
         </nav>
         <a class="button primary" href="https://github.com/ghana-gpt/opentoolhub">GitHub</a>
       </div>
     </header>
 
-    <main>
+    <main id="main">
       <section class="hero">
         <div class="container hero-grid">
-          <div>
-            <span class="eyebrow">Build with the right tools</span>
-            <h1>Find the right public tools for the project you want to build.</h1>
+          <div class="hero-copy">
+            <span class="eyebrow">Builder-first discovery</span>
+            <h1>Start with an idea. Leave with a working stack.</h1>
             <p class="lead">
-              OpenToolHub helps developers, builders, civic teams, and AI creators move from an idea to a practical stack with less friction and more clarity.
+              OpenToolHub connects a plain-language goal to the public APIs,
+              starter templates, and worked examples that fit it — without
+              pretending every tool is interchangeable.
             </p>
-            <div class="cta-row">
-              <a class="button primary" href="use-cases.html">Explore use cases</a>
-              <a class="button secondary" href="stacks.html">View stacks</a>
-            </div>
+            <ol class="step-list">
+              <li><strong>Describe</strong> what you want to build.</li>
+              <li><strong>Pick</strong> the areas it touches.</li>
+              <li><strong>Get</strong> a stack, a template, and an example.</li>
+            </ol>
+            <p class="small muted">
+              Prefer the terminal?
+              <code>python3 scripts/recommend.py "travel app"</code>
+            </p>
           </div>
 
-          <div class="hero-panel">
-            <h3>Featured paths</h3>
-            <ul>
-              <li>Travel and local discovery</li>
-              <li>City dashboards and public data</li>
-              <li>AI research and answer workflows</li>
-              <li>Public-health and civic tools</li>
-              <li>Startup MVPs and prototypes</li>
-            </ul>
-          </div>
+          <form id="builder-form" class="builder-panel" aria-labelledby="builder-title">
+            <h2 id="builder-title">Build your path</h2>
+
+            <div class="field">
+              <label for="idea">1. What do you want to build?</label>
+              <p class="hint" id="idea-hint">
+                A sentence is enough. Search uses names, aliases, and keywords
+                from the catalog.
+              </p>
+              <textarea
+                id="idea"
+                name="idea"
+                rows="3"
+                aria-describedby="idea-hint"
+                placeholder="A travel app that shows weather and local places"
+              ></textarea>
+              <div
+                class="suggestion-row"
+                id="idea-suggestions"
+                aria-label="Suggested ideas"
+              ></div>
+            </div>
+
+            <fieldset class="field">
+              <legend>2. Which areas does it touch?</legend>
+              <div id="category-options" class="chip-grid" aria-label="Areas"></div>
+            </fieldset>
+
+            <fieldset class="field">
+              <legend>3. How much build experience do you have?</legend>
+              <div class="radio-row">
+                <label class="radio">
+                  <input type="radio" name="level" value="low" checked />
+                  <span>Getting started</span>
+                </label>
+                <label class="radio">
+                  <input type="radio" name="level" value="medium" />
+                  <span>Comfortable</span>
+                </label>
+                <label class="radio">
+                  <input type="radio" name="level" value="high" />
+                  <span>Experienced</span>
+                </label>
+              </div>
+            </fieldset>
+
+            <div class="cta-row">
+              <button type="submit" class="button primary">Build my path</button>
+              <button type="reset" class="button secondary">Reset</button>
+            </div>
+          </form>
         </div>
       </section>
 
-      <section class="section container">
+      <section class="section container" id="results-section" hidden>
         <div class="section-head">
-          <span class="eyebrow">Use cases</span>
-          <h2>Start with the problem, not the API list.</h2>
+          <span class="eyebrow">Your path</span>
+          <h2 id="results-title" tabindex="-1">Results</h2>
         </div>
-        <div id="featured-use-cases" class="grid three"></div>
+        <div id="results" aria-live="polite"></div>
       </section>
 
       <section class="section alt">
         <div class="container">
           <div class="section-head">
-            <span class="eyebrow">Featured stacks</span>
-            <h2>Recommended combinations for real workflows.</h2>
+            <span class="eyebrow">Catalog</span>
+            <h2>Every use case starts with a problem.</h2>
+            <p class="section-lead">
+              Each path resolves to a stack, templates, and a worked example.
+              Every API links to its source and documentation.
+            </p>
           </div>
-          <div id="featured-stacks" class="grid three"></div>
-        </div>
-      </section>
-
-      <section class="section container">
-        <div class="section-head">
-          <span class="eyebrow">Starter templates</span>
-          <h2>Launch faster with a working starting pattern.</h2>
-        </div>
-        <div id="featured-templates" class="grid three"></div>
-      </section>
-
-      <section class="section alt">
-        <div class="container spotlight">
-          <div>
-            <span class="eyebrow">Why this project matters</span>
-            <h2>Public tools are useful — but discovery is still fragmented.</h2>
-          </div>
-          <p>
-            OpenToolHub exists to make that discovery clearer. Instead of treating APIs as isolated pieces, we map them to real product ideas, stack combinations, and builder workflows.
-          </p>
+          <div id="featured-use-cases" class="grid three"></div>
         </div>
       </section>
     </main>
 
-    <script src="app.js"></script>
+    <footer class="site-footer">
+      <div class="container footer-grid">
+        <p>OpenToolHub maps public tools to real projects.</p>
+        <p class="small muted">
+          Data is validated by <code>scripts/validate.py</code>. No tracking and
+          no server secrets in the browser.
+        </p>
+      </div>
+    </footer>
+
+    <script type="module" src="js/home.js"></script>
   </body>
 </html>

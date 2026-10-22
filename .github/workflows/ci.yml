@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate data
+        run: python3 scripts/validate.py --strict
+
+      - name: Run tests
+        run: python3 -m unittest discover -s tests -v
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Check JavaScript syntax
+        run: |
+          for file in site/js/*.js; do
+            target="/tmp/$(basename "$file" .js).mjs"
+            cp "$file" "$target"
+            node --check "$target"
+          done
+
+      - name: Stage site data
+        run: python3 scripts/build_site.py
+
+      - name: Check staged data is current
+        run: python3 scripts/build_site.py --check
+
+      - name: Recommender smoke test
+        run: python3 scripts/recommend.py --json "civic tool" > /tmp/recommendation.json
+
+      - name: Check smoke test output
+        run: python3 -c "import json; data = json.load(open('/tmp/recommendation.json')); assert data['use_case']['id'] == 'public-good-tool', data['use_case']['id']"
