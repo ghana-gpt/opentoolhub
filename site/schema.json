@@ -1,0 +1,265 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ghana-gpt.github.io/opentoolhub/schema.json",
+  "title": "OpenToolHub data model",
+  "description": "JSON Schema for the six validated catalog arrays. Cross-file references and repository paths are additionally checked by scripts/validate.py.",
+  "type": "object",
+  "$defs": {
+    "Id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "description": "Kebab-case identifier, unique within its source file."
+    },
+    "NonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "StringList": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "Level": {
+      "type": "string",
+      "enum": ["low", "medium", "high"]
+    },
+    "Category": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "description",
+        "tags",
+        "best_for",
+        "integration_complexity",
+        "aliases"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/Id" },
+        "name": { "$ref": "#/$defs/NonEmptyString" },
+        "description": { "$ref": "#/$defs/NonEmptyString" },
+        "tags": { "$ref": "#/$defs/StringList" },
+        "best_for": { "$ref": "#/$defs/StringList" },
+        "integration_complexity": { "$ref": "#/$defs/Level" },
+        "aliases": { "$ref": "#/$defs/StringList" }
+      }
+    },
+    "UseCase": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "summary",
+        "goal",
+        "aliases",
+        "keywords",
+        "categories",
+        "stack_ids",
+        "template_ids",
+        "example",
+        "personas"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/Id" },
+        "name": { "$ref": "#/$defs/NonEmptyString" },
+        "summary": { "$ref": "#/$defs/NonEmptyString" },
+        "goal": { "$ref": "#/$defs/NonEmptyString" },
+        "aliases": { "$ref": "#/$defs/StringList" },
+        "keywords": { "$ref": "#/$defs/StringList" },
+        "categories": {
+          "allOf": [{ "$ref": "#/$defs/StringList" }],
+          "items": { "$ref": "#/$defs/Id" }
+        },
+        "stack_ids": {
+          "allOf": [{ "$ref": "#/$defs/StringList" }],
+          "items": { "$ref": "#/$defs/Id" }
+        },
+        "template_ids": {
+          "allOf": [{ "$ref": "#/$defs/StringList" }],
+          "items": { "$ref": "#/$defs/Id" }
+        },
+        "example": {
+          "type": "string",
+          "pattern": "^examples/[^/]+\\.md$"
+        },
+        "personas": { "$ref": "#/$defs/StringList" }
+      }
+    },
+    "StackTool": {
+      "type": "object",
+      "required": ["slot", "category", "api_ids"],
+      "properties": {
+        "slot": { "$ref": "#/$defs/NonEmptyString" },
+        "category": { "$ref": "#/$defs/Id" },
+        "api_ids": {
+          "allOf": [{ "$ref": "#/$defs/StringList" }],
+          "items": { "$ref": "#/$defs/Id" }
+        }
+      }
+    },
+    "Stack": {
+      "type": "object",
+      "required": [
+        "id",
+        "use_case",
+        "name",
+        "categories",
+        "tools",
+        "notes",
+        "difficulty",
+        "best_for"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/Id" },
+        "use_case": { "$ref": "#/$defs/Id" },
+        "name": { "$ref": "#/$defs/NonEmptyString" },
+        "categories": {
+          "allOf": [{ "$ref": "#/$defs/StringList" }],
+          "items": { "$ref": "#/$defs/Id" }
+        },
+        "tools": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/StackTool" }
+        },
+        "notes": { "$ref": "#/$defs/NonEmptyString" },
+        "difficulty": { "$ref": "#/$defs/Level" },
+        "best_for": { "$ref": "#/$defs/StringList" }
+      }
+    },
+    "API": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "url",
+        "docs_url",
+        "category_ids",
+        "description",
+        "best_for",
+        "auth",
+        "pricing",
+        "integration_complexity",
+        "data_freshness",
+        "licensing_notes",
+        "related_tags"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/Id" },
+        "name": { "$ref": "#/$defs/NonEmptyString" },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https?://"
+        },
+        "docs_url": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https?://"
+        },
+        "category_ids": {
+          "allOf": [{ "$ref": "#/$defs/StringList" }],
+          "items": { "$ref": "#/$defs/Id" }
+        },
+        "description": { "$ref": "#/$defs/NonEmptyString" },
+        "best_for": { "$ref": "#/$defs/StringList" },
+        "auth": {
+          "type": "string",
+          "enum": ["none", "api-key", "token"]
+        },
+        "pricing": {
+          "type": "string",
+          "enum": ["free", "free-tier", "paid"]
+        },
+        "integration_complexity": { "$ref": "#/$defs/Level" },
+        "data_freshness": { "$ref": "#/$defs/Level" },
+        "licensing_notes": { "$ref": "#/$defs/NonEmptyString" },
+        "related_tags": { "$ref": "#/$defs/StringList" }
+      }
+    },
+    "Template": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "description",
+        "use_case_ids",
+        "category_ids",
+        "tags",
+        "path",
+        "status"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/Id" },
+        "name": { "$ref": "#/$defs/NonEmptyString" },
+        "description": { "$ref": "#/$defs/NonEmptyString" },
+        "use_case_ids": {
+          "allOf": [{ "$ref": "#/$defs/StringList" }],
+          "items": { "$ref": "#/$defs/Id" }
+        },
+        "category_ids": {
+          "allOf": [{ "$ref": "#/$defs/StringList" }],
+          "items": { "$ref": "#/$defs/Id" }
+        },
+        "tags": { "$ref": "#/$defs/StringList" },
+        "path": {
+          "type": "string",
+          "pattern": "^templates/[^/]+/README\\.md$"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["starter", "variant"]
+        }
+      }
+    },
+    "Example": {
+      "type": "object",
+      "required": ["id", "use_case", "title", "path", "summary"],
+      "properties": {
+        "id": { "$ref": "#/$defs/Id" },
+        "use_case": { "$ref": "#/$defs/Id" },
+        "title": { "$ref": "#/$defs/NonEmptyString" },
+        "path": {
+          "type": "string",
+          "pattern": "^examples/[^/]+\\.md$"
+        },
+        "summary": { "$ref": "#/$defs/NonEmptyString" }
+      }
+    },
+    "CategoryFile": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/Category" }
+    },
+    "UseCaseFile": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/UseCase" }
+    },
+    "StackFile": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/Stack" }
+    },
+    "APIFile": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/API" }
+    },
+    "TemplateFile": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/Template" }
+    },
+    "ExampleFile": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/Example" }
+    }
+  }
+}

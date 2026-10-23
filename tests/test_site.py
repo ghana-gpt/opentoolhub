@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 import unittest
 import xml.etree.ElementTree as ET
 from html.parser import HTMLParser
@@ -17,6 +18,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SITE = ROOT / "site"
 SITE_URL = "https://ghana-gpt.github.io/opentoolhub/"
+sys.path.insert(0, str(ROOT / "scripts"))
+
+import build_site  # noqa: E402
+import recommend  # noqa: E402
 
 PAGE_SCRIPTS = {
     "index.html": "js/home.js",
@@ -26,6 +31,8 @@ PAGE_SCRIPTS = {
     "templates.html": "js/templates.js",
     "apis.html": "js/apis.js",
 }
+
+PAGE_FILES = tuple(sorted(path.name for path in SITE.glob("*.html")))
 
 EXTERNAL_PREFIXES = ("http://", "https://", "mailto:", "tel:", "#", "data:")
 
@@ -44,7 +51,13 @@ class PageParser(HTMLParser):
         self.has_main = False
         self.title = ""
         self.description = ""
+        self.canonical = ""
+        self.open_graph: dict[str, str] = {}
+        self.twitter: dict[str, str] = {}
+        self.json_ld: list[str] = []
         self._in_title = False
+        self._json_ld = ""
+        self._in_json_ld = False
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         values = {name: value or "" for name, value in attrs}
@@ -54,8 +67,18 @@ class PageParser(HTMLParser):
             self.has_main = True
         if tag == "title":
             self._in_title = True
-        if tag == "meta" and values.get("name") == "description":
-            self.description = values.get("content", "")
+        if tag == "link" and values.get("rel") == "canonical":
+            self.canonical = values.get("href", "")
+        if tag == "meta":
+            if values.get("name") == "description":
+                self.description = values.get("content", "")
+            if values.get("property", "").startswith("og:"):
+                self.open_graph[values["property"]] = values.get("content", "")
+            if values.get("name", "").startswith("twitter:"):
+                self.twitter[values["name"]] = values.get("content", "")
+        if tag == "script" and values.get("type") == "application/ld+json":
+            self._in_json_ld = True
+            self._json_ld = ""
         if values.get("id"):
             self.ids.add(values["id"])
         if values.get("aria-live"):
@@ -76,10 +99,17 @@ class PageParser(HTMLParser):
     def handle_endtag(self, tag: str) -> None:
         if tag == "title":
             self._in_title = False
+        if tag == "script" and self._in_json_ld:
+            if self._json_ld.strip():
+                self.json_ld.append(self._json_ld.strip())
+            self._json_ld = ""
+            self._in_json_ld = False
 
     def handle_data(self, data: str) -> None:
         if self._in_title:
             self.title += data
+        if self._in_json_ld:
+            self._json_ld += data
 
 
 def parse_page(name: str) -> PageParser:
@@ -87,6 +117,11 @@ def parse_page(name: str) -> PageParser:
     parser.feed((SITE / name).read_text(encoding="utf-8"))
     parser.close()
     return parser
+
+
+def catalog_manifest() -> dict:
+    """Build the manifest from source so tests do not need staged data."""
+    return build_site.build_catalog_manifest(sorted((ROOT / "data").glob("*.json")))
 
 
 class SiteTests(unittest.TestCase):
@@ -105,6 +140,143 @@ class SiteTests(unittest.TestCase):
                 self.assertTrue(parsed.title.strip(), "missing <title>")
                 self.assertTrue(parsed.description.strip(), "missing meta description")
                 self.assertTrue(parsed.has_main, "missing <main>")
+
+    def test_every_page_has_discovery_metadata(self):
+        for page in PAGE_FILES:
+            parsed = parse_page(page)
+            with self.subTest(page=page):
+                self.assertTrue(
+                    parsed.canonical.startswith(SITE_URL),
+                    f"{page} has no absolute canonical URL",
+                )
+                relative = parsed.canonical[len(SITE_URL) :].split("?")[0].split("#")[0]
+                self.assertTrue(
+                    (SITE / (relative or "index.html")).is_file(),
+                    f"{page} canonical points at missing {relative}",
+                )
+                self.assertTrue(parsed.description.strip())
+                self.assertEqual(parsed.open_graph.get("og:title"), parsed.title.strip())
+                self.assertEqual(parsed.open_graph.get("og:url"), parsed.canonical)
+                self.assertEqual(
+                    parsed.open_graph.get("og:description"), parsed.description
+                )
+                self.assertTrue(parsed.open_graph.get("og:type"))
+                self.assertEqual(
+                    parsed.open_graph.get("og:image"), SITE_URL + "social-card.png"
+                )
+                self.assertEqual(parsed.twitter.get("twitter:card"), "summary_large_image")
+                self.assertEqual(parsed.twitter.get("twitter:title"), parsed.title.strip())
+                self.assertEqual(
+                    parsed.twitter.get("twitter:description"), parsed.description
+                )
+                self.assertEqual(
+                    parsed.twitter.get("twitter:image"), SITE_URL + "social-card.png"
+                )
+                self.assertTrue((SITE / "social-card.png").is_file())
+
+    def test_json_ld_is_valid_and_matches_the_page(self):
+        source = {
+            name: json.loads((ROOT / "data" / f"{name}.json").read_text(encoding="utf-8"))
+            for name in build_site.CATALOG_FILES
+        }
+        for page in PAGE_FILES:
+            parsed = parse_page(page)
+            with self.subTest(page=page):
+                if page == "404.html":
+                    self.assertEqual(parsed.json_ld, [])
+                    continue
+                self.assertEqual(len(parsed.json_ld), 1, f"{page} needs one JSON-LD block")
+                payload = json.loads(parsed.json_ld[0])
+                self.assertEqual(payload["@context"], "https://schema.org")
+                nodes = payload["@graph"]
+                types = [node["@type"] for node in nodes]
+                self.assertIn("WebSite", types)
+                if page == "index.html":
+                    self.assertIn("DataCatalog", types)
+                    catalog = next(
+                        node for node in nodes if node["@type"] == "DataCatalog"
+                    )
+                    self.assertEqual(len(catalog["dataset"]), 6)
+                elif page == "use-case.html":
+                    self.assertIn("WebPage", types)
+                    self.assertNotIn("ItemList", types)
+                else:
+                    self.assertIn("CollectionPage", types)
+                    listing = next(node for node in nodes if node["@type"] == "ItemList")
+                    expected = {
+                        "use-cases.html": "use-cases",
+                        "stacks.html": "stacks",
+                        "templates.html": "templates",
+                        "apis.html": "apis",
+                    }[page]
+                    self.assertEqual(listing["numberOfItems"], len(source[expected]))
+                    self.assertEqual(len(listing["itemListElement"]), len(source[expected]))
+                    for item in listing["itemListElement"]:
+                        self.assertTrue(item["url"].startswith("http"))
+
+    def test_schema_definitions_cover_every_data_file(self):
+        schema = json.loads((SITE / "schema.json").read_text(encoding="utf-8"))
+        self.assertEqual(
+            schema["$schema"], "https://json-schema.org/draft/2020-12/schema"
+        )
+        self.assertEqual(schema["$id"], SITE_URL + "schema.json")
+        for name, type_name in build_site.ENTITY_TYPES.items():
+            with self.subTest(file=name):
+                file_def = schema["$defs"][f"{type_name}File"]
+                self.assertEqual(file_def["type"], "array")
+                item_name = file_def["items"]["$ref"].rsplit("/", 1)[-1]
+                item_def = schema["$defs"][item_name]
+                records = json.loads(
+                    (ROOT / "data" / f"{name}.json").read_text(encoding="utf-8")
+                )
+                self.assertTrue(records)
+                for record in records:
+                    self.assertTrue(
+                        set(item_def["required"]) <= set(record),
+                        f"{name} record {record.get('id')} misses required fields",
+                    )
+
+    def test_catalog_manifest_matches_source_data_and_schema(self):
+        manifest = catalog_manifest()
+        schema = json.loads((SITE / "schema.json").read_text(encoding="utf-8"))
+        self.assertEqual(manifest["schema_version"], build_site.SCHEMA_VERSION)
+        self.assertEqual(set(manifest["counts"]), set(build_site.CATALOG_FILES))
+        self.assertEqual(set(manifest["files"]), set(build_site.CATALOG_FILES))
+        for name, type_name in build_site.ENTITY_TYPES.items():
+            with self.subTest(file=name):
+                records = json.loads(
+                    (ROOT / "data" / f"{name}.json").read_text(encoding="utf-8")
+                )
+                entry = manifest["files"][name]
+                self.assertEqual(entry["count"], len(records))
+                self.assertEqual(manifest["counts"][name], len(records))
+                self.assertEqual(manifest["entities"][name], records)
+                self.assertEqual(entry["id_field"], "id")
+                self.assertTrue(entry["schema"].endswith(f"#/$defs/{type_name}File"))
+                self.assertIn(f"{type_name}File", schema["$defs"])
+
+    def test_browser_recommender_matches_the_published_contract(self):
+        contract = catalog_manifest()["recommendation"]
+        self.assertEqual(contract["engine"], "deterministic-lexical-v1")
+        self.assertEqual(contract["exact_match_fields"], ["id", "name", "aliases"])
+        self.assertEqual(contract["stopwords"], sorted(recommend.STOPWORDS))
+
+        data_js = (SITE / "js" / "data.js").read_text(encoding="utf-8")
+        stopword_literal = re.search(
+            r"const STOPWORDS = new Set\(\s*\"([^\"]+)\"", data_js, re.S
+        )
+        self.assertIsNotNone(stopword_literal)
+        self.assertEqual(
+            set(stopword_literal.group(1).split()), set(recommend.STOPWORDS)
+        )
+        for field in ("category.aliases", "stack.best_for", "tool.slot", "templateById"):
+            self.assertIn(field, data_js)
+
+        home_js = (SITE / "js" / "home.js").read_text(encoding="utf-8")
+        for score in ("score: 100", "score: 95", "score: 90", "Math.min(89, 80 + bonus)"):
+            self.assertIn(score, home_js)
+        self.assertIn("40 + Math.floor(ratio * 40)", home_js)
+        self.assertIn("ratio < 0.5", home_js)
 
     def test_local_assets_and_links_exist(self):
         for page in PAGE_SCRIPTS:
@@ -227,7 +399,14 @@ class SiteTests(unittest.TestCase):
                     )
 
     def test_discovery_files_exist(self):
-        for name in (".nojekyll", "llms.txt", "robots.txt", "sitemap.xml"):
+        for name in (
+            ".nojekyll",
+            "llms.txt",
+            "robots.txt",
+            "schema.json",
+            "sitemap.xml",
+            "social-card.png",
+        ):
             with self.subTest(name=name):
                 self.assertTrue((SITE / name).is_file(), f"missing site/{name}")
 
@@ -269,6 +448,9 @@ class SiteTests(unittest.TestCase):
             "examples",
         ):
             self.assertIn(f"{SITE_URL}data/{name}.json", text)
+        self.assertIn(f"{SITE_URL}data/catalog.json", text)
+        self.assertIn(f"{SITE_URL}schema.json", text)
+        self.assertIn("deterministic-lexical-v1", text)
 
     def test_no_legacy_entrypoint(self):
         self.assertFalse((SITE / "app.js").exists())

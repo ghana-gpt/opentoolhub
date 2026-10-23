@@ -49,5 +49,14 @@ def _int_from_env(name: str, default: int) -> int:
 
 DATA_DIR = _path_from_env("OPEN_TOOL_HUB_DATA_DIR", ROOT / "data")
 SITE_DIR = _path_from_env("OPEN_TOOL_HUB_SITE_DIR", ROOT / "site")
+SITE_URL = (
+    os.environ.get("OPEN_TOOL_HUB_SITE_URL", "").strip()
+    or "https://ghana-gpt.github.io/opentoolhub/"
+).rstrip("/") + "/"
+REPOSITORY_URL = (
+    os.environ.get("OPEN_TOOL_HUB_REPOSITORY_URL", "").strip()
+    or "https://github.com/ghana-gpt/opentoolhub"
+).rstrip("/")
+SCHEMA_VERSION = "1.0.0"
 HOST = os.environ.get("OPEN_TOOL_HUB_HOST", "").strip() or "127.0.0.1"
 PORT = _int_from_env("OPEN_TOOL_HUB_PORT", 8000)

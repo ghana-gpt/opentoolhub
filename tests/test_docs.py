@@ -61,6 +61,19 @@ class DocumentationTests(unittest.TestCase):
                     "reference to the removed docs/architecture-overview.md",
                 )
 
+    def test_data_model_documents_the_machine_contract(self):
+        text = (ROOT / "docs" / "data-model.md").read_text(encoding="utf-8")
+        for needle in (
+            "catalog.json",
+            "schema.json",
+            "JSON Schema draft 2020-12",
+            "deterministic-lexical-v1",
+            "CollectionPage",
+            "TechArticle",
+        ):
+            with self.subTest(needle=needle):
+                self.assertIn(needle, text)
+
     def test_data_readme_lists_every_json_file(self):
         readme = (ROOT / "data" / "README.md").read_text(encoding="utf-8")
         for path in sorted((ROOT / "data").glob("*.json")):

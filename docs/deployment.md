@@ -49,6 +49,9 @@ python3 scripts/build_site.py
 test -f site/index.html
 test -f site/404.html
 test -f site/data/use-cases.json
+test -f site/data/catalog.json
+test -f site/schema.json
+test -f site/social-card.png
 test -f site/llms.txt
 ```
 

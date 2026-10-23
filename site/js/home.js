@@ -7,6 +7,7 @@ import {
   templatesForUseCase,
   examplesForUseCase,
   searchTokens,
+  tokenize,
   normalize,
 } from "./data.js";
 import {
@@ -28,34 +29,72 @@ import { renderUseCaseCard, renderToolList } from "./render.js";
 
 const LEVELS = new Set(["low", "medium", "high"]);
 
+// Keep the search document and scores in sync with scripts/recommend.py and the
+// recommendation contract in the generated catalog manifest.
+function scoreOneUseCase(useCase, normalizedIdea, tokens, data) {
+  if (normalizedIdea === normalize(useCase.id)) {
+    return { score: 100, matchedBy: "id" };
+  }
+  if (normalizedIdea === normalize(useCase.name)) {
+    return { score: 95, matchedBy: "name" };
+  }
+  if (
+    useCase.aliases.some((alias) => normalizedIdea === normalize(alias))
+  ) {
+    return { score: 90, matchedBy: "alias" };
+  }
+  if (!tokens.length) {
+    return { score: 0, matchedBy: "none" };
+  }
+
+  const documentTokens = new Set(
+    tokenize(useCaseSearchText(useCase, data))
+  );
+  const matched = tokens.filter((token) => documentTokens.has(token));
+  if (!matched.length) {
+    return { score: 0, matchedBy: "none" };
+  }
+  if (matched.length === tokens.length) {
+    const nameTokens = new Set(tokenize(useCase.name));
+    const bonus = tokens.every((token) => nameTokens.has(token)) ? 5 : 0;
+    return { score: Math.min(89, 80 + bonus), matchedBy: "keywords" };
+  }
+  const ratio = matched.length / tokens.length;
+  if (ratio < 0.5) {
+    return { score: 0, matchedBy: "none" };
+  }
+  return { score: 40 + Math.floor(ratio * 40), matchedBy: "keywords" };
+}
+
 function scoreUseCases(idea, categoryIds, data) {
+  const hasIdea = String(idea).trim().length > 0;
+  const normalizedIdea = normalize(idea);
   const tokens = searchTokens(idea);
   const results = [];
   for (const useCase of data.useCases) {
-    const words = normalize(useCaseSearchText(useCase, data)).split(" ");
-    const hits = tokens.filter((token) =>
-      words.some((word) => word.startsWith(token))
-    );
-    if (tokens.length && hits.length !== tokens.length) {
-      continue;
-    }
     const overlap = categoryIds.filter((id) => useCase.categories.includes(id));
     if (categoryIds.length && !overlap.length) {
       continue;
     }
-    const exactName = normalize(useCase.name) === normalize(idea);
-    const exactAlias = useCase.aliases.some(
-      (alias) => normalize(alias) === normalize(idea)
+    const { score, matchedBy } = scoreOneUseCase(
+      useCase,
+      normalizedIdea,
+      tokens,
+      data
     );
-    let score = hits.length * 10 + overlap.length * 5;
-    if (exactName) score += 60;
-    if (exactAlias) score += 50;
-    results.push({ useCase, score });
+    if (hasIdea && !score) {
+      continue;
+    }
+    results.push({ useCase, score, matchedBy });
   }
-  results.sort(
-    (left, right) =>
-      right.score - left.score || left.useCase.name.localeCompare(right.useCase.name)
-  );
+  results.sort((left, right) => {
+    const leftName = left.useCase.name.toLowerCase();
+    const rightName = right.useCase.name.toLowerCase();
+    return (
+      right.score - left.score ||
+      (leftName < rightName ? -1 : leftName > rightName ? 1 : 0)
+    );
+  });
   return results;
 }
 

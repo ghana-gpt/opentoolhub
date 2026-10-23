@@ -65,6 +65,17 @@ Plain ES modules with no framework:
 Browsers cannot fetch `../data/*.json` from a served `site/` directory, so
 `scripts/build_site.py` copies the files to `site/data/` and `--check` detects a
 stale copy. The same script serves `site/` with cache disabled for local work.
+It also emits `site/data/catalog.json`, a deterministic manifest that links every
+array to its checked-in `site/schema.json` fragment and records counts, entity
+relationships, and the browser/CLI recommendation contract. The six source
+arrays remain canonical; the manifest is a discovery layer for agents and other
+one-request clients.
+
+Each page's static head carries canonical, Open Graph, Twitter card, and
+schema.org JSON-LD metadata. Collection pages publish a `CollectionPage` and
+`ItemList`, the home page publishes a `DataCatalog`, and `use-case.js` replaces
+the generic detail-page metadata with the resolved use case's canonical URL and
+`TechArticle` after loading the JSON.
 
 ### Deployment
 

@@ -94,10 +94,21 @@ export function matchesQuery(text, query) {
   return tokens.every((token) => words.some((word) => word.startsWith(token)));
 }
 
+/** Match _search_document() in scripts/recommend.py field for field. */
 export function useCaseSearchText(useCase, data) {
-  const categoryNames = useCase.categories.map((id) => {
+  const categoryNames = useCase.categories.flatMap((id) => {
     const category = data.categoryById.get(id);
-    return category ? category.name : id;
+    return category ? [category.name, ...category.aliases] : [id];
+  });
+  const stackTerms = useCase.stack_ids.flatMap((id) => {
+    const stack = data.stackById.get(id);
+    return stack
+      ? [stack.name, ...stack.best_for, ...stack.tools.map((tool) => tool.slot)]
+      : [];
+  });
+  const templateNames = useCase.template_ids.flatMap((id) => {
+    const template = data.templateById.get(id);
+    return template ? [template.name] : [];
   });
   return [
     useCase.name,
@@ -107,6 +118,8 @@ export function useCaseSearchText(useCase, data) {
     ...useCase.keywords,
     ...useCase.personas,
     ...categoryNames,
+    ...stackTerms,
+    ...templateNames,
   ].join(" ");
 }
 

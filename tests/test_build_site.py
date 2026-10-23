@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import json
 import shutil
 import sys
 import tempfile
@@ -24,7 +25,8 @@ class BuildSiteTests(unittest.TestCase):
         self.site = root / "site"
         self.data.mkdir()
         self.site.mkdir()
-        (self.data / "use-cases.json").write_text('{"items": []}\n', encoding="utf-8")
+        for name in build_site.CATALOG_FILES:
+            (self.data / f"{name}.json").write_text("[]\n", encoding="utf-8")
         self.original_paths = (build_site.DATA_DIR, build_site.SITE_DIR)
         build_site.DATA_DIR = self.data
         build_site.SITE_DIR = self.site
@@ -50,10 +52,40 @@ class BuildSiteTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(
             (target / "use-cases.json").read_text(encoding="utf-8"),
-            '{"items": []}\n',
+            "[]\n",
         )
         self.assertFalse((target / "removed.json").exists())
-        self.assertIn("Staged 1 JSON file", output)
+        self.assertIn(f"Staged {len(build_site.CATALOG_FILES)} JSON file", output)
+
+    def test_stage_writes_a_deterministic_catalog_manifest(self):
+        code, _, _ = self.run_stage()
+        self.assertEqual(code, 0)
+        catalog = self.site / "data" / build_site.CATALOG_FILE
+        first = catalog.read_bytes()
+        self.assertEqual(build_site.manifest_bytes(sorted(self.data.glob("*.json"))), first)
+
+        self.run_stage()
+        self.assertEqual(catalog.read_bytes(), first)
+
+    def test_manifest_documents_files_schemas_counts_and_contract(self):
+        code, _, _ = self.run_stage()
+        self.assertEqual(code, 0)
+        manifest = json.loads(
+            (self.site / "data" / build_site.CATALOG_FILE).read_text(encoding="utf-8")
+        )
+
+        self.assertEqual(manifest["schema_version"], build_site.SCHEMA_VERSION)
+        self.assertEqual(manifest["recommendation"]["engine"], "deterministic-lexical-v1")
+        self.assertEqual(set(manifest["files"]), set(build_site.CATALOG_FILES))
+        self.assertEqual(set(manifest["entities"]), set(build_site.CATALOG_FILES))
+        for name, entry in manifest["files"].items():
+            self.assertEqual(entry["count"], 0)
+            self.assertEqual(entry["id_field"], "id")
+            self.assertTrue(entry["url"].endswith(f"data/{name}.json"))
+            self.assertIn(
+                f"#/$defs/{build_site.ENTITY_TYPES[name]}File",
+                entry["schema"],
+            )
 
     def test_check_detects_stale_copy_without_overwriting_it(self):
         code, _, _ = self.run_stage()
@@ -61,12 +93,24 @@ class BuildSiteTests(unittest.TestCase):
         target = self.site / "data" / "use-cases.json"
         original = target.read_bytes()
 
-        (self.data / "use-cases.json").write_text('{"items": [1]}\n', encoding="utf-8")
+        (self.data / "use-cases.json").write_text("[1]\n", encoding="utf-8")
         code, _, errors = self.run_stage(check_only=True)
 
         self.assertEqual(code, 1)
         self.assertIn("site/data is out of date", errors)
         self.assertEqual(target.read_bytes(), original)
+
+    def test_check_detects_stale_manifest_without_overwriting_it(self):
+        code, _, _ = self.run_stage()
+        self.assertEqual(code, 0)
+        catalog = self.site / "data" / build_site.CATALOG_FILE
+        catalog.write_text("{}\n", encoding="utf-8")
+
+        code, _, errors = self.run_stage(check_only=True)
+
+        self.assertEqual(code, 1)
+        self.assertIn(build_site.CATALOG_FILE, errors)
+        self.assertEqual(catalog.read_text(encoding="utf-8"), "{}\n")
 
     def test_missing_data_directory_fails_cleanly(self):
         shutil.rmtree(self.data)
@@ -75,10 +119,18 @@ class BuildSiteTests(unittest.TestCase):
         self.assertIn("data directory not found", errors)
 
     def test_empty_data_directory_fails_cleanly(self):
-        (self.data / "use-cases.json").unlink()
+        for path in self.data.glob("*.json"):
+            path.unlink()
         code, _, errors = self.run_stage()
         self.assertEqual(code, 1)
         self.assertIn("no JSON files found", errors)
+
+    def test_incomplete_catalog_fails_cleanly(self):
+        (self.data / "examples.json").unlink()
+        code, _, errors = self.run_stage()
+        self.assertEqual(code, 1)
+        self.assertIn("missing catalog data file", errors)
+        self.assertIn("examples", errors)
 
 
 if __name__ == "__main__":

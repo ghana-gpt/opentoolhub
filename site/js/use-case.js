@@ -31,6 +31,120 @@ function renderNotFound(detail, message) {
     </div>`;
 }
 
+function updateMetadata(useCase, stacks, data) {
+  const canonical = qs('link[rel="canonical"]');
+  const siteUrl = canonical
+    ? new URL(".", canonical.href).href
+    : new URL("./", window.location.href).href;
+  const url = `${siteUrl}use-case.html?id=${encodeURIComponent(useCase.id)}`;
+  const title = `${useCase.name} | OpenToolHub`;
+
+  document.title = title;
+  const setContent = (selector, value) => {
+    const element = qs(selector);
+    if (element) {
+      element.setAttribute("content", value);
+    }
+  };
+  if (canonical) {
+    canonical.setAttribute("href", url);
+  }
+  const descriptionTags = [
+    'meta[name="description"]',
+    'meta[property="og:description"]',
+    'meta[name="twitter:description"]',
+  ];
+  for (const selector of descriptionTags) {
+    setContent(selector, useCase.summary);
+  }
+  const titleTags = [
+    'meta[property="og:title"]',
+    'meta[name="twitter:title"]',
+  ];
+  for (const selector of titleTags) {
+    setContent(selector, title);
+  }
+  setContent('meta[property="og:url"]', url);
+  setContent('meta[property="og:type"]', "article");
+
+  const categories = useCase.categories
+    .map((id) => data.categoryById.get(id))
+    .filter(Boolean);
+  const apis = new Map();
+  for (const stack of stacks) {
+    for (const api of apisForStack(stack, data)) {
+      apis.set(api.id, api);
+    }
+  }
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": `${siteUrl}#website`,
+        "url": siteUrl,
+        "name": "OpenToolHub",
+      },
+      {
+        "@type": "WebPage",
+        "@id": `${url}#page`,
+        "url": url,
+        "name": title,
+        "description": useCase.summary,
+        "isPartOf": { "@id": `${siteUrl}#website` },
+        "mainEntity": { "@id": `${url}#article` },
+      },
+      {
+        "@type": "TechArticle",
+        "@id": `${url}#article`,
+        "headline": useCase.name,
+        "description": useCase.summary,
+        "about": categories.map((category) => ({
+          "@type": "Thing",
+          "name": category.name,
+        })),
+        "mentions": [...apis.values()].map((api) => ({
+          "@type": "SoftwareApplication",
+          "name": api.name,
+          "url": api.url,
+        })),
+        "mainEntityOfPage": { "@id": `${url}#page` },
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "OpenToolHub",
+            "item": siteUrl,
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Use cases",
+            "item": `${siteUrl}use-cases.html`,
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": useCase.name,
+            "item": url,
+          },
+        ],
+      },
+    ],
+  };
+  let script = qs("#use-case-structured-data");
+  if (!script) {
+    script = document.createElement("script");
+    script.type = "application/ld+json";
+    script.id = "use-case-structured-data";
+    document.head.append(script);
+  }
+  script.textContent = JSON.stringify(structuredData).replace(/</g, "\\u003c");
+}
+
 function renderRelated(useCase, data) {
   const related = data.useCases
     .filter((candidate) => candidate.id !== useCase.id)
@@ -93,15 +207,6 @@ async function init() {
     return;
   }
 
-  document.title = `${useCase.name} | OpenToolHub`;
-  const description = qs('meta[name="description"]');
-  if (description) {
-    description.setAttribute("content", useCase.summary);
-  }
-  if (crumb) {
-    crumb.textContent = useCase.name;
-  }
-
   const stacks = stacksForUseCase(useCase, data);
   const templates = templatesForUseCase(useCase, data);
   const examples = examplesForUseCase(useCase, data);
@@ -110,6 +215,10 @@ async function init() {
       apisForStack(stack, data).map((api) => api.id)
     )
   );
+  updateMetadata(useCase, stacks, data);
+  if (crumb) {
+    crumb.textContent = useCase.name;
+  }
   const primary = stacks[0];
 
   detail.innerHTML = `
