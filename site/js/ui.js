@@ -72,13 +72,23 @@ export function statusBadge(status) {
   return pill(status, status);
 }
 
-export function categoryLinks(categoryIds, data) {
+const CATALOG_TARGETS = {
+  "use-cases": { page: "use-cases.html", label: "use cases" },
+  stacks: { page: "stacks.html", label: "stacks" },
+  templates: { page: "templates.html", label: "templates" },
+  apis: { page: "apis.html", label: "APIs" },
+};
+
+export function categoryLinks(categoryIds, data, target = "use-cases") {
+  const catalog = CATALOG_TARGETS[target] ?? CATALOG_TARGETS["use-cases"];
   return categoryIds
     .map((id) => {
       const category = data.categoryById.get(id);
       const label = category ? category.name : id;
-      return `<a class="tag" href="use-cases.html?category=${encodeURIComponent(
+      return `<a class="tag" href="${catalog.page}?category=${encodeURIComponent(
         id
+      )}" aria-label="Browse ${catalog.label} in ${escapeHtml(
+        label
       )}">${escapeHtml(label)}</a>`;
     })
     .join("");
@@ -92,10 +102,16 @@ export function repoUrl(path) {
   return `${REPO_URL}/blob/main/${encoded}`;
 }
 
-export function repoLink(path, label, className = "text-link") {
-  return `<a class="${className}" href="${repoUrl(path)}" rel="noopener">${escapeHtml(
-    label
-  )}</a>`;
+export function repoLink(
+  path,
+  label,
+  className = "text-link",
+  ariaLabel = ""
+) {
+  const accessible = ariaLabel ? ` aria-label="${escapeHtml(ariaLabel)}"` : "";
+  return `<a class="${className}" href="${repoUrl(
+    path
+  )}" rel="noopener"${accessible}>${escapeHtml(label)}</a>`;
 }
 
 export function useCaseLink(

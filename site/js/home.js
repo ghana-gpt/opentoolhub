@@ -259,7 +259,7 @@ function renderResults(matches, level, data) {
     );
   } else {
     const [{ useCase }, ...alternatives] = matches;
-    title.textContent = `A path for ${useCase.name.toLowerCase()}`;
+    title.textContent = `A path for ${useCase.name}`;
     results.innerHTML = renderPath(useCase, level, data);
     setReady(results);
     if (alternatives.length) {
@@ -304,6 +304,7 @@ async function init() {
   }
 
   section.hidden = true;
+  setReady(results);
   title.textContent = "";
   renderIdeaSuggestions(data, ideaInput);
   renderCatalogStats(data);
@@ -350,6 +351,14 @@ async function init() {
 
   form.addEventListener("reset", () => {
     window.setTimeout(() => {
+      ideaInput.value = "";
+      for (const area of qsa('input[name="area"]')) {
+        area.checked = false;
+      }
+      const medium = qs('input[name="level"][value="medium"]');
+      if (medium) {
+        medium.checked = true;
+      }
       updateParams({ q: "", areas: "", level: "" });
       section.hidden = true;
       results.innerHTML = "";

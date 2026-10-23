@@ -599,6 +599,18 @@ select.select {
   font-size: 0.85rem;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .muted {
   color: var(--muted);
 }
@@ -981,6 +993,12 @@ select.select {
 
 .panel .stack-card:last-child {
   margin-bottom: 0;
+}
+
+.stack-card:target {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(114, 211, 255, 0.22),
+    0 14px 32px var(--shadow);
 }
 
 /* Footer */

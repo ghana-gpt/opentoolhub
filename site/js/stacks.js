@@ -133,6 +133,7 @@ async function init() {
   const target = targetId ? document.getElementById(targetId) : null;
   if (target) {
     target.scrollIntoView({ block: "start" });
+    target.focus({ preventScroll: true });
   }
 }
 

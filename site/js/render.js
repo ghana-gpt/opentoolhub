@@ -105,7 +105,9 @@ export function renderStackCard(
 ) {
   const useCase = data.useCaseById.get(stack.use_case);
   return `
-    <article class="card stack-card" id="stack-${escapeHtml(stack.id)}">
+    <article class="card stack-card" id="stack-${escapeHtml(
+      stack.id
+    )}" tabindex="-1">
       <div class="card-top">
         ${difficultyBadge(stack.difficulty)}
         ${
@@ -116,7 +118,11 @@ export function renderStackCard(
       </div>
       <h3>${escapeHtml(stack.name)}</h3>
       <p>${escapeHtml(stack.notes)}</p>
-      <div class="tag-list stack-tags">${categoryLinks(stack.categories, data)}</div>
+      <div class="tag-list stack-tags">${categoryLinks(
+        stack.categories,
+        data,
+        "stacks"
+      )}</div>
       ${
         detailed
           ? renderToolList(stack, data)
@@ -141,7 +147,11 @@ export function renderApiCard(api, data) {
         api.name
       )}</a></h3>
       <p>${escapeHtml(api.description)}</p>
-      <div class="tag-list">${categoryLinks(api.category_ids, data)}</div>
+      <div class="tag-list">${categoryLinks(
+        api.category_ids,
+        data,
+        "apis"
+      )}</div>
       <dl class="fact-grid">
         <div><dt>Best for</dt><dd>${escapeHtml(api.best_for.join(", "))}</dd></div>
         <div><dt>Integration</dt><dd>${escapeHtml(humanize(api.integration_complexity))}</dd></div>
@@ -153,7 +163,9 @@ export function renderApiCard(api, data) {
       </details>
       <p class="card-action"><a class="text-link" href="${escapeHtml(
         api.docs_url
-      )}" rel="noopener">Read the docs →</a></p>
+      )}" rel="noopener" aria-label="Read the ${escapeHtml(
+        api.name
+      )} documentation">Read the docs →</a></p>
     </article>`;
 }
 
@@ -169,11 +181,20 @@ export function renderTemplateCard(template, data) {
       </div>
       <h3>${escapeHtml(template.name)}</h3>
       <p>${escapeHtml(template.description)}</p>
-      <div class="tag-list">${categoryLinks(template.category_ids, data)}</div>
+      <div class="tag-list">${categoryLinks(
+        template.category_ids,
+        data,
+        "templates"
+      )}</div>
       <p class="muted small">Built for: ${useCases
         .map((useCase) => useCaseLink(useCase, useCase.name, "meta-link"))
         .join(", ") || "unassigned"}</p>
-      <p class="card-action">${repoLink(template.path, "Open the starter →")}</p>
+      <p class="card-action">${repoLink(
+        template.path,
+        "Open the starter →",
+        "text-link",
+        `Open the ${template.name} starter`
+      )}</p>
     </article>`;
 }
 
