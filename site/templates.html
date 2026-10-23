@@ -47,15 +47,28 @@
               type="search"
               placeholder="dashboard, weather, assistant…"
               autocomplete="off"
+              aria-controls="template-grid"
             />
           </div>
           <div class="field inline">
             <label for="status-filter">Status</label>
-            <select id="status-filter" class="select">
+            <select
+              id="status-filter"
+              class="select"
+              aria-controls="template-grid"
+            >
               <option value="">Any status</option>
               <option value="starter">Starter</option>
               <option value="variant">Variant</option>
             </select>
+          </div>
+          <div class="field inline">
+            <label for="template-category-filter">Area</label>
+            <select
+              id="template-category-filter"
+              class="select"
+              aria-controls="template-grid"
+            ></select>
           </div>
           <button type="button" id="clear-templates" class="button secondary">
             Clear filters

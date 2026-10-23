@@ -31,17 +31,32 @@ function humanize(value) {
 export function renderUseCaseCard(useCase, data) {
   const stacks = stacksForUseCase(useCase, data);
   const templates = templatesForUseCase(useCase, data);
+  const primary = stacks[0];
   return `
     <article class="card">
       <div class="card-top">${pill(useCase.id)}</div>
       <h3>${useCaseLink(useCase, useCase.name, "card-title")}</h3>
       <p>${escapeHtml(useCase.summary)}</p>
       <div class="tag-list">${categoryLinks(useCase.categories, data)}</div>
+      ${
+        primary
+          ? `<p class="card-stack muted small">Starting stack:
+              <a class="meta-link" href="stacks.html#stack-${encodeURIComponent(
+                primary.id
+              )}">${escapeHtml(primary.name)}</a>
+            </p>`
+          : ""
+      }
       <div class="meta-row">
         <span>${escapeHtml(countLabel(stacks.length, "stack"))}</span>
         <span>${escapeHtml(countLabel(templates.length, "template"))}</span>
       </div>
-      <p class="card-action">${useCaseLink(useCase, "See the stack and example →")}</p>
+      <p class="card-action">${useCaseLink(
+        useCase,
+        "See the stack and example →",
+        "text-link",
+        `Open the ${useCase.name} path`
+      )}</p>
     </article>`;
 }
 
@@ -89,11 +104,8 @@ export function renderStackCard(
   { detailed = false, showUseCase = true } = {}
 ) {
   const useCase = data.useCaseById.get(stack.use_case);
-  const categories = stack.categories
-    .map((id) => data.categoryById.get(id)?.name ?? id)
-    .join(" · ");
   return `
-    <article class="card stack-card">
+    <article class="card stack-card" id="stack-${escapeHtml(stack.id)}">
       <div class="card-top">
         ${difficultyBadge(stack.difficulty)}
         ${
@@ -104,7 +116,7 @@ export function renderStackCard(
       </div>
       <h3>${escapeHtml(stack.name)}</h3>
       <p>${escapeHtml(stack.notes)}</p>
-      <p class="muted small">${escapeHtml(categories)}</p>
+      <div class="tag-list stack-tags">${categoryLinks(stack.categories, data)}</div>
       ${
         detailed
           ? renderToolList(stack, data)

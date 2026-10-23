@@ -1004,6 +1004,163 @@ select.select {
   color: var(--muted);
 }
 
+/* Catalog context, area discovery, and filter affordances */
+
+.catalog-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  max-width: 520px;
+  margin: 24px 0 18px;
+}
+
+.catalog-stats:empty {
+  display: none;
+}
+
+.catalog-stats div {
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.catalog-stats dt {
+  color: var(--muted);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.catalog-stats dd {
+  margin: 2px 0 0;
+  color: var(--primary);
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.section-cta {
+  margin-top: 28px;
+}
+
+.area-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.area-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  gap: 4px 14px;
+  align-items: center;
+  min-height: 88px;
+  padding: 18px 20px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  transition: transform 0.18s ease, border-color 0.18s ease;
+}
+
+.area-card:hover {
+  color: var(--text);
+  border-color: var(--primary);
+  transform: translateY(-2px);
+}
+
+.area-name {
+  grid-column: 1;
+  font-weight: 700;
+}
+
+.area-count {
+  grid-column: 1;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.area-arrow {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  color: var(--primary);
+  font-size: 1.2rem;
+  transition: transform 0.18s ease;
+}
+
+.area-card:hover .area-arrow {
+  transform: translateX(3px);
+}
+
+.card-stack {
+  margin: 10px 0 0;
+}
+
+.stack-tags {
+  margin-top: 10px;
+}
+
+.detail-facts {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.button:disabled:hover {
+  transform: none;
+}
+
+.button.secondary:disabled:hover {
+  background: transparent;
+}
+
+.state .cta-row {
+  margin-top: 16px;
+}
+
+/* Content and controls stay inside their columns at every width. */
+.grid > *,
+.hero-grid > *,
+.detail-grid > * {
+  min-width: 0;
+}
+
+.card,
+.panel,
+.path-result,
+.area-card {
+  overflow-wrap: anywhere;
+}
+
+.card-top,
+.meta-row,
+.tool-head {
+  flex-wrap: wrap;
+}
+
+[id] {
+  scroll-margin-top: 92px;
+}
+
+.nav-links a,
+.brand {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+.chip,
+.chip-check,
+.radio {
+  min-height: 38px;
+}
+
 /* Responsive */
 
 @media (max-width: 980px) {
@@ -1022,12 +1179,21 @@ select.select {
 }
 
 @media (max-width: 700px) {
+  .site-header {
+    position: static;
+  }
+
   .hero {
     padding: 36px 0 48px;
   }
 
   .hero-grid {
     gap: 28px;
+  }
+
+  .catalog-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: none;
   }
 
   .grid.two,
@@ -1043,8 +1209,20 @@ select.select {
   .nav-links {
     order: 3;
     width: 100%;
+    flex-wrap: nowrap;
     justify-content: flex-start;
     gap: 14px;
+    padding-bottom: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .nav-links::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-links a {
+    white-space: nowrap;
   }
 
   .builder-panel {
@@ -1073,6 +1251,45 @@ select.select {
   }
 }
 
+@media (max-width: 480px) {
+  .container {
+    width: calc(100% - 24px);
+  }
+
+  .nav-bar {
+    padding: 10px 0;
+  }
+
+  .nav-links {
+    gap: 12px;
+  }
+
+  .nav-links a {
+    font-size: 0.9rem;
+  }
+
+  .section {
+    padding: 44px 0;
+  }
+
+  .catalog-stats {
+    gap: 8px;
+  }
+
+  .catalog-stats div {
+    padding: 8px 10px;
+  }
+
+  .catalog-stats dd {
+    font-size: 1.08rem;
+  }
+
+  .area-card {
+    min-height: 76px;
+    padding: 16px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -1086,7 +1303,9 @@ select.select {
   }
 
   .card:hover,
-  .button:hover {
+  .button:hover,
+  .area-card:hover,
+  .area-card:hover .area-arrow {
     transform: none;
   }
 }

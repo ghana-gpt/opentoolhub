@@ -11,6 +11,8 @@ import {
   showEmpty,
   escapeHtml,
   countLabel,
+  setReady,
+  setClearState,
 } from "./ui.js";
 import { renderApiCard } from "./render.js";
 
@@ -55,12 +57,14 @@ async function init() {
     `<option value="">All categories</option>` +
     data.categories
       .filter((category) => usedCategories.has(category.id))
-      .map(
-        (category) =>
-          `<option value="${escapeHtml(category.id)}">${escapeHtml(
-            category.name
-          )}</option>`
-      )
+      .map((category) => {
+        const total = data.apis.filter((api) =>
+          api.category_ids.includes(category.id)
+        ).length;
+        return `<option value="${escapeHtml(category.id)}">${escapeHtml(
+          category.name
+        )} (${total})</option>`;
+      })
       .join("");
 
   const params = readParams(["q", "category", "pricing"]);
@@ -76,6 +80,7 @@ async function init() {
     const pricing = pricingSelect.value;
     const matches = filterApis(data, query, categoryId, pricing);
     updateParams({ q: query, category: categoryId, pricing });
+    setClearState(clear, Boolean(query || categoryId || pricing));
     count.textContent = `${countLabel(matches.length, "API")} of ${
       data.apis.length
     }`;
@@ -88,6 +93,7 @@ async function init() {
       return;
     }
     grid.innerHTML = matches.map((api) => renderApiCard(api, data)).join("");
+    setReady(grid);
   }
 
   search.addEventListener("input", debounce(render, 180));

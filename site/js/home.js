@@ -21,6 +21,8 @@ import {
   categoryLinks,
   difficultyBadge,
   repoLink,
+  countLabel,
+  setReady,
 } from "./ui.js";
 import { renderUseCaseCard, renderToolList } from "./render.js";
 
@@ -107,6 +109,69 @@ function renderCategoryOptions(data, selected) {
     .join("");
 }
 
+function renderCatalogStats(data) {
+  const stats = [
+    ["Use cases", data.useCases.length],
+    ["Stacks", data.stacks.length],
+    ["Templates", data.templates.length],
+    ["APIs", data.apis.length],
+  ];
+  qs("#catalog-stats").innerHTML = stats
+    .map(
+      ([label, value]) => `
+        <div>
+          <dt>${escapeHtml(label)}</dt>
+          <dd>${escapeHtml(value)}</dd>
+        </div>`
+    )
+    .join("");
+}
+
+function renderAreaDirectory(data) {
+  const section = qs("#area-section");
+  const container = qs("#area-directory");
+  if (!section || !container) {
+    return;
+  }
+  const entries = data.categories
+    .map((category) => {
+      const useCaseCount = data.useCases.filter((useCase) =>
+        useCase.categories.includes(category.id)
+      ).length;
+      const apiCount = data.apis.filter((api) =>
+        api.category_ids.includes(category.id)
+      ).length;
+      return { category, useCaseCount, apiCount };
+    })
+    .filter(({ useCaseCount, apiCount }) => useCaseCount || apiCount);
+  if (!entries.length) {
+    return;
+  }
+  container.innerHTML = entries
+    .map(
+      ({ category, useCaseCount, apiCount }) => `
+        <a class="area-card" href="use-cases.html?category=${encodeURIComponent(
+          category.id
+        )}" aria-label="Browse ${escapeHtml(
+          countLabel(useCaseCount, "use case")
+        )} in ${escapeHtml(category.name)}">
+          <span class="area-name">${escapeHtml(category.name)}</span>
+          <span class="area-count">${escapeHtml(
+            countLabel(useCaseCount, "use case")
+          )} · ${escapeHtml(countLabel(apiCount, "API"))}</span>
+          <span class="area-arrow" aria-hidden="true">→</span>
+        </a>`
+    )
+    .join("");
+  section.hidden = false;
+}
+
+function scrollBehavior() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ? "auto"
+    : "smooth";
+}
+
 function renderPath(useCase, level, data) {
   const stacks = stacksForUseCase(useCase, data);
   const templates = templatesForUseCase(useCase, data);
@@ -186,16 +251,17 @@ function renderResults(matches, level, data) {
     showEmpty(
       results,
       "Nothing matched those filters",
-      "Try a broader idea, remove an area, or clear the filters and start again."
-    );
-    results.insertAdjacentHTML(
-      "beforeend",
-      `<p class="cta-row"><button type="button" class="button secondary" data-action="clear">Clear filters</button></p>`
+      "Try a broader idea, remove an area, or clear the filters and start again.",
+      `<p class="cta-row">
+        <button type="button" class="button secondary" data-action="clear">Clear filters</button>
+        <a class="text-link" href="use-cases.html">Browse all use cases</a>
+      </p>`
     );
   } else {
     const [{ useCase }, ...alternatives] = matches;
     title.textContent = `A path for ${useCase.name.toLowerCase()}`;
     results.innerHTML = renderPath(useCase, level, data);
+    setReady(results);
     if (alternatives.length) {
       results.insertAdjacentHTML(
         "beforeend",
@@ -210,7 +276,7 @@ function renderResults(matches, level, data) {
     }
   }
 
-  section.scrollIntoView({ behavior: "smooth", block: "start" });
+  section.scrollIntoView({ behavior: scrollBehavior(), block: "start" });
   title.focus({ preventScroll: true });
 }
 
@@ -240,6 +306,8 @@ async function init() {
   section.hidden = true;
   title.textContent = "";
   renderIdeaSuggestions(data, ideaInput);
+  renderCatalogStats(data);
+  renderAreaDirectory(data);
   qs("#featured-use-cases").innerHTML = data.useCases
     .map((useCase) => renderUseCaseCard(useCase, data))
     .join("");
@@ -271,7 +339,7 @@ async function init() {
         "Describe an idea or pick an area",
         "Add a short description or select at least one area, then build your path."
       );
-      section.scrollIntoView({ behavior: "smooth", block: "start" });
+      section.scrollIntoView({ behavior: scrollBehavior(), block: "start" });
       ideaInput.focus({ preventScroll: true });
       return;
     }

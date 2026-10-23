@@ -48,11 +48,16 @@
               type="search"
               placeholder="weather, civic, assistant…"
               autocomplete="off"
+              aria-controls="use-cases-grid"
             />
           </div>
           <div class="field inline">
             <label for="category-filter">Area</label>
-            <select id="category-filter" class="select"></select>
+            <select
+              id="category-filter"
+              class="select"
+              aria-controls="use-cases-grid"
+            ></select>
           </div>
           <button type="button" id="clear-use-cases" class="button secondary">
             Clear filters

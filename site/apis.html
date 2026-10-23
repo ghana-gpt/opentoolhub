@@ -47,15 +47,24 @@
               type="search"
               placeholder="weather, maps, payments…"
               autocomplete="off"
+              aria-controls="api-grid"
             />
           </div>
           <div class="field inline">
             <label for="api-category-filter">Category</label>
-            <select id="api-category-filter" class="select"></select>
+            <select
+              id="api-category-filter"
+              class="select"
+              aria-controls="api-grid"
+            ></select>
           </div>
           <div class="field inline">
             <label for="pricing-filter">Pricing</label>
-            <select id="pricing-filter" class="select">
+            <select
+              id="pricing-filter"
+              class="select"
+              aria-controls="api-grid"
+            >
               <option value="">Any pricing</option>
               <option value="free">Free</option>
               <option value="free-tier">Free tier</option>

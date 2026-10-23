@@ -23,10 +23,22 @@ export function qsa(selector, root = document) {
 }
 
 export function setBusy(node, message) {
+  node.setAttribute("aria-busy", "true");
   node.innerHTML = `<p class="state" role="status">${escapeHtml(message)}</p>`;
 }
 
+export function setReady(node) {
+  node.setAttribute("aria-busy", "false");
+}
+
+export function setClearState(button, active) {
+  if (button) {
+    button.disabled = !active;
+  }
+}
+
 export function showError(node, error) {
+  setReady(node);
   const message = error instanceof Error ? error.message : String(error);
   node.innerHTML = `
     <div class="state state-error" role="alert">
@@ -37,11 +49,13 @@ export function showError(node, error) {
     </div>`;
 }
 
-export function showEmpty(node, title, message) {
+export function showEmpty(node, title, message, actionHtml = "") {
+  setReady(node);
   node.innerHTML = `
     <div class="state">
       <h3>${escapeHtml(title)}</h3>
       <p>${escapeHtml(message)}</p>
+      ${actionHtml}
     </div>`;
 }
 
@@ -84,10 +98,16 @@ export function repoLink(path, label, className = "text-link") {
   )}</a>`;
 }
 
-export function useCaseLink(useCase, label = useCase.name, className = "text-link") {
+export function useCaseLink(
+  useCase,
+  label = useCase.name,
+  className = "text-link",
+  ariaLabel = ""
+) {
+  const accessible = ariaLabel ? ` aria-label="${escapeHtml(ariaLabel)}"` : "";
   return `<a class="${className}" href="use-case.html?id=${encodeURIComponent(
     useCase.id
-  )}">${escapeHtml(label)}</a>`;
+  )}"${accessible}>${escapeHtml(label)}</a>`;
 }
 
 export function readParams(names) {

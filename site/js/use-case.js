@@ -5,20 +5,24 @@ import {
   stacksForUseCase,
   templatesForUseCase,
   examplesForUseCase,
+  apisForStack,
 } from "./data.js";
 import {
   qs,
   escapeHtml,
   setBusy,
+  setReady,
   showError,
   readParams,
   categoryLinks,
+  difficultyBadge,
   repoLink,
   statusBadge,
 } from "./ui.js";
 import { renderStackCard, renderUseCaseCard } from "./render.js";
 
 function renderNotFound(detail, message) {
+  setReady(detail);
   detail.innerHTML = `
     <div class="state state-error" role="alert">
       <h1>Use case not found</h1>
@@ -90,6 +94,10 @@ async function init() {
   }
 
   document.title = `${useCase.name} | OpenToolHub`;
+  const description = qs('meta[name="description"]');
+  if (description) {
+    description.setAttribute("content", useCase.summary);
+  }
   if (crumb) {
     crumb.textContent = useCase.name;
   }
@@ -97,6 +105,12 @@ async function init() {
   const stacks = stacksForUseCase(useCase, data);
   const templates = templatesForUseCase(useCase, data);
   const examples = examplesForUseCase(useCase, data);
+  const apiIds = new Set(
+    stacks.flatMap((stack) =>
+      apisForStack(stack, data).map((api) => api.id)
+    )
+  );
+  const primary = stacks[0];
 
   detail.innerHTML = `
     <header class="page-header">
@@ -108,20 +122,36 @@ async function init() {
       <p class="small muted">Built for: ${useCase.personas
         .map((persona) => escapeHtml(persona))
         .join(", ")}</p>
+      <dl class="fact-grid detail-facts" aria-label="Path at a glance">
+        <div><dt>Difficulty</dt><dd>${
+          primary ? difficultyBadge(primary.difficulty) : "Not rated"
+        }</dd></div>
+        <div><dt>Stacks</dt><dd>${stacks.length}</dd></div>
+        <div><dt>APIs</dt><dd>${apiIds.size}</dd></div>
+        <div><dt>Templates</dt><dd>${templates.length}</dd></div>
+        <div><dt>Examples</dt><dd>${examples.length}</dd></div>
+      </dl>
     </header>
 
     <div class="detail-grid">
-      <section class="panel">
-        <h2>Stack${stacks.length === 1 ? "" : "s"}</h2>
-        ${stacks
-          .map((stack) =>
-            renderStackCard(stack, data, { detailed: true, showUseCase: false })
-          )
-          .join("")}
+      <section class="panel" id="stacks" aria-labelledby="stacks-title">
+        <h2 id="stacks-title">Stack${stacks.length === 1 ? "" : "s"}</h2>
+        ${
+          stacks.length
+            ? stacks
+                .map((stack) =>
+                  renderStackCard(stack, data, {
+                    detailed: true,
+                    showUseCase: false,
+                  })
+                )
+                .join("")
+            : `<p class="muted">No stack is registered for this use case yet. <a class="text-link" href="stacks.html">Browse every stack</a>.</p>`
+        }
       </section>
 
-      <aside class="panel">
-        <h2>Start here</h2>
+      <aside class="panel" id="start-here" aria-labelledby="start-here-title">
+        <h2 id="start-here-title">Start here</h2>
         ${
           templates.length
             ? `<ul class="link-list">${templates
@@ -160,6 +190,7 @@ async function init() {
     </div>
 
     ${renderRelated(useCase, data)}`;
+  setReady(detail);
 }
 
 init();

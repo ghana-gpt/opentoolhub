@@ -11,6 +11,8 @@ import {
   showEmpty,
   escapeHtml,
   countLabel,
+  setReady,
+  setClearState,
 } from "./ui.js";
 import { renderUseCaseCard } from "./render.js";
 
@@ -47,12 +49,14 @@ async function init() {
   categorySelect.innerHTML =
     `<option value="">All areas</option>` +
     data.categories
-      .map(
-        (category) =>
-          `<option value="${escapeHtml(category.id)}">${escapeHtml(
-            category.name
-          )}</option>`
-      )
+      .map((category) => {
+        const total = data.useCases.filter((useCase) =>
+          useCase.categories.includes(category.id)
+        ).length;
+        return `<option value="${escapeHtml(category.id)}">${escapeHtml(
+          category.name
+        )} (${total})</option>`;
+      })
       .join("");
 
   const validCategory = data.categoryById.has(params.category)
@@ -65,6 +69,7 @@ async function init() {
     const categoryId = categorySelect.value;
     const matches = filterUseCases(data, query, categoryId);
     updateParams({ q: query, category: categoryId });
+    setClearState(clear, Boolean(query || categoryId));
     count.textContent = `${countLabel(matches.length, "use case")} of ${
       data.useCases.length
     }`;
@@ -79,6 +84,7 @@ async function init() {
     grid.innerHTML = matches
       .map((useCase) => renderUseCaseCard(useCase, data))
       .join("");
+    setReady(grid);
   }
 
   search.addEventListener("input", debounce(render, 180));

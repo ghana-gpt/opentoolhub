@@ -47,11 +47,24 @@
               type="search"
               placeholder="weather, maps, database…"
               autocomplete="off"
+              aria-controls="stack-grid"
             />
           </div>
           <div class="field inline">
             <label for="difficulty-filter">Difficulty</label>
-            <select id="difficulty-filter" class="select"></select>
+            <select
+              id="difficulty-filter"
+              class="select"
+              aria-controls="stack-grid"
+            ></select>
+          </div>
+          <div class="field inline">
+            <label for="stack-category-filter">Area</label>
+            <select
+              id="stack-category-filter"
+              class="select"
+              aria-controls="stack-grid"
+            ></select>
           </div>
           <button type="button" id="clear-stacks" class="button secondary">
             Clear filters

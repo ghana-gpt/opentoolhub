@@ -38,6 +38,8 @@ class PageParser(HTMLParser):
         self.ids: set[str] = set()
         self.refs: list[str] = []
         self.scripts: list[tuple[str, str]] = []
+        self.aria_controls: list[tuple[str, str]] = []
+        self.live_regions: set[str] = set()
         self.lang = ""
         self.has_main = False
         self.title = ""
@@ -56,6 +58,10 @@ class PageParser(HTMLParser):
             self.description = values.get("content", "")
         if values.get("id"):
             self.ids.add(values["id"])
+        if values.get("aria-live"):
+            self.live_regions.add(values.get("id", ""))
+        for target in values.get("aria-controls", "").split():
+            self.aria_controls.append((values.get("id", tag), target))
         if tag == "script" and values.get("src"):
             self.scripts.append((values["src"], values.get("type", "")))
         for attribute in ("href", "src"):
@@ -130,6 +136,65 @@ class SiteTests(unittest.TestCase):
                         element_id,
                         parsed.ids,
                         f"{script} selects #{element_id}, absent from {page}",
+                    )
+
+    def test_area_filters_and_catalog_context(self):
+        expected = {
+            "index.html": {
+                "catalog-stats",
+                "area-section",
+                "area-directory",
+                "featured-use-cases",
+            },
+            "use-cases.html": {
+                "category-filter",
+                "use-cases-grid",
+                "use-cases-count",
+            },
+            "stacks.html": {
+                "stack-category-filter",
+                "stack-grid",
+                "stack-count",
+            },
+            "templates.html": {
+                "template-category-filter",
+                "template-grid",
+                "template-count",
+            },
+            "apis.html": {
+                "api-category-filter",
+                "api-grid",
+                "api-count",
+            },
+        }
+        for page, ids in expected.items():
+            parsed = parse_page(page)
+            with self.subTest(page=page):
+                self.assertTrue(
+                    ids.issubset(parsed.ids),
+                    f"{page} is missing {sorted(ids - parsed.ids)}",
+                )
+                self.assertTrue(
+                    parsed.live_regions,
+                    f"{page} has no aria-live result count",
+                )
+
+    def test_aria_controls_resolve(self):
+        for page in (
+            "index.html",
+            "use-cases.html",
+            "stacks.html",
+            "templates.html",
+            "apis.html",
+        ):
+            parsed = parse_page(page)
+            with self.subTest(page=page):
+                self.assertTrue(parsed.aria_controls, f"{page} has no aria-controls")
+                for owner, target in parsed.aria_controls:
+                    self.assertIn(
+                        target,
+                        parsed.ids,
+                        f"{page}: {owner} controls missing #{target}",
                     )
 
     def test_refs_are_subpath_safe(self):
