@@ -88,5 +88,41 @@
     "best_for": ["MVPs", "dashboards", "prototype validation"],
     "integration_complexity": "low",
     "aliases": ["analytics", "tracking", "metrics", "experiments"]
+  },
+  {
+    "id": "food-access",
+    "name": "Food access and nutrition",
+    "description": "Food availability, nutrition data, product labels, and community food resources.",
+    "tags": ["food", "nutrition", "access"],
+    "best_for": ["food access maps", "nutrition tools", "community food programs"],
+    "integration_complexity": "low",
+    "aliases": ["food access", "food insecurity", "nutrition", "food data", "food resources"]
+  },
+  {
+    "id": "housing-data",
+    "name": "Housing and affordability",
+    "description": "Rent, income, housing, and neighborhood affordability data.",
+    "tags": ["housing", "rent", "affordability"],
+    "best_for": ["housing tools", "rent research", "community planning"],
+    "integration_complexity": "medium",
+    "aliases": ["housing", "rent", "affordability", "fair market rent", "housing data"]
+  },
+  {
+    "id": "research-data",
+    "name": "Research data and scholarly records",
+    "description": "Open repositories, preprints, publications, and scholarly metadata.",
+    "tags": ["research", "scholarly", "open science"],
+    "best_for": ["research tools", "literature review", "reproducibility"],
+    "integration_complexity": "medium",
+    "aliases": ["research data", "open science", "scholarly data", "preprints", "publications"]
+  },
+  {
+    "id": "transit",
+    "name": "Transit and mobility",
+    "description": "Public transit schedules, routes, stops, and service alerts.",
+    "tags": ["transit", "mobility", "routes"],
+    "best_for": ["transit apps", "accessibility tools", "mobility dashboards"],
+    "integration_complexity": "medium",
+    "aliases": ["transit", "public transit", "mobility", "bus", "train"]
   }
 ]

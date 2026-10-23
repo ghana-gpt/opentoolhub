@@ -40,5 +40,40 @@
     "title": "Public-good tool example",
     "path": "examples/public-good-tool.md",
     "summary": "Help residents find local services and public information in one place."
+  },
+  {
+    "id": "climate-resilience-example",
+    "use_case": "climate-resilience",
+    "title": "Climate resilience example",
+    "path": "examples/climate-resilience.md",
+    "summary": "Combine climate data, maps, and public health context for local adaptation planning."
+  },
+  {
+    "id": "community-food-access-example",
+    "use_case": "community-food-access",
+    "title": "Community food access example",
+    "path": "examples/community-food-access.md",
+    "summary": "Map food resources and nutrition context to show where access gaps are largest."
+  },
+  {
+    "id": "open-research-data-example",
+    "use_case": "open-research-data",
+    "title": "Open research data example",
+    "path": "examples/open-research-data.md",
+    "summary": "Search datasets and preprints, then follow DOIs and citations back to the source."
+  },
+  {
+    "id": "housing-affordability-example",
+    "use_case": "housing-affordability",
+    "title": "Housing affordability example",
+    "path": "examples/housing-affordability.md",
+    "summary": "Compare rent benchmarks with local incomes and neighborhood context."
+  },
+  {
+    "id": "transit-access-example",
+    "use_case": "transit-access",
+    "title": "Transit access example",
+    "path": "examples/transit-access.md",
+    "summary": "Show transit coverage, service alerts, and the destinations people can reach."
   }
 ]

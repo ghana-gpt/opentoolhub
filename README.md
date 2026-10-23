@@ -12,7 +12,7 @@ repository.
 
 ## What the project actually does
 
-- Keeps six builder-focused use cases, each with a stack, categories, templates,
+- Keeps eleven builder-focused use cases, each with a stack, categories, templates,
   and a worked example.
 - Resolves a plain-language goal ("travel app", "civic tool") to one use case
   using ids, names, aliases, and keywords from `data/`.

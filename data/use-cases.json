@@ -76,5 +76,70 @@
     "template_ids": ["public-good-tool", "civic-dashboard"],
     "example": "examples/public-good-tool.md",
     "personas": ["civic team", "nonprofit team", "community builder"]
+  },
+  {
+    "id": "climate-resilience",
+    "name": "Climate resilience and adaptation",
+    "summary": "Useful for local climate risk, environmental conditions, and adaptation planning.",
+    "goal": "Help communities understand climate hazards and decide what to protect.",
+    "aliases": ["climate adaptation", "climate risk", "climate dashboard", "resilience planning"],
+    "keywords": ["climate", "resilience", "adaptation", "hazard", "heat", "flood", "weather"],
+    "categories": ["weather", "public-data", "maps", "health-data"],
+    "stack_ids": ["climate-resilience-stack"],
+    "template_ids": ["climate-resilience-dashboard"],
+    "example": "examples/climate-resilience.md",
+    "personas": ["civic team", "climate researcher", "nonprofit team"]
+  },
+  {
+    "id": "community-food-access",
+    "name": "Community food access",
+    "summary": "Useful for mapping food resources, nutrition information, and access gaps.",
+    "goal": "Help residents find affordable, nutritious food and help organizations target gaps.",
+    "aliases": ["food access", "food insecurity", "food map", "nutrition tool", "community food"],
+    "keywords": ["food", "nutrition", "grocery", "food desert", "pantry", "market", "access"],
+    "categories": ["food-access", "public-data", "maps", "local-discovery"],
+    "stack_ids": ["food-access-stack"],
+    "template_ids": ["food-access-map"],
+    "example": "examples/community-food-access.md",
+    "personas": ["community organizer", "public-interest builder", "researcher"]
+  },
+  {
+    "id": "open-research-data",
+    "name": "Open research data",
+    "summary": "Useful for discovering datasets, preprints, and scholarly records with traceable sources.",
+    "goal": "Make research outputs easier to find, compare, and reuse.",
+    "aliases": ["open research", "research data", "literature review", "preprint search", "scholarly search", "reproducible research"],
+    "keywords": ["research", "dataset", "preprint", "citation", "doi", "reproducibility", "literature"],
+    "categories": ["research-data", "search-and-retrieval", "ai-workflows"],
+    "stack_ids": ["open-research-stack"],
+    "template_ids": ["open-research-explorer"],
+    "example": "examples/open-research-data.md",
+    "personas": ["researcher", "librarian", "ai builder"]
+  },
+  {
+    "id": "housing-affordability",
+    "name": "Housing affordability",
+    "summary": "Useful for comparing rents, incomes, and neighborhood housing pressure.",
+    "goal": "Show where housing costs fit household budgets and where gaps are growing.",
+    "aliases": ["rent tracker", "affordable housing", "housing data", "rent comparison"],
+    "keywords": ["housing", "rent", "affordability", "income", "fair market rent", "tenant", "neighborhood"],
+    "categories": ["housing-data", "public-data", "maps", "local-discovery"],
+    "stack_ids": ["housing-affordability-stack"],
+    "template_ids": ["housing-affordability-explorer"],
+    "example": "examples/housing-affordability.md",
+    "personas": ["housing researcher", "tenant advocate", "civic team"]
+  },
+  {
+    "id": "transit-access",
+    "name": "Transit access",
+    "summary": "Useful for showing service coverage, trip options, and access gaps.",
+    "goal": "Help people understand how well transit connects them to daily needs.",
+    "aliases": ["transit app", "public transit", "mobility access", "bus and train"],
+    "keywords": ["transit", "bus", "train", "route", "stop", "mobility", "accessibility", "commute"],
+    "categories": ["transit", "maps", "local-discovery", "public-data"],
+    "stack_ids": ["transit-access-stack"],
+    "template_ids": ["transit-access-map"],
+    "example": "examples/transit-access.md",
+    "personas": ["transit rider", "civic team", "mobility researcher"]
   }
 ]

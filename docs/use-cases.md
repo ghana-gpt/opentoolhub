@@ -187,6 +187,139 @@ information into something residents can actually use.
 This use case keeps the project grounded in public value rather than novelty: the
 result should help someone answer a real question about their own community.
 
+## Use case 7: Climate resilience and adaptation
+
+### Problem
+Communities need to understand local climate hazards and decide where adaptation work matters most, but the evidence is split across weather services, open data portals, and health agencies.
+
+### Typical goals
+- compare historical climate conditions with current alerts
+- identify neighborhoods exposed to heat, flooding, or other hazards
+- connect climate risk to population and health context
+- produce a traceable briefing for local planning decisions
+
+### Typical tool categories
+- weather and environment data
+- public datasets
+- maps and geolocation
+- health and public-interest data
+
+### Example stack
+- NASA POWER for historical climate and meteorological context
+- National Weather Service for forecasts and alerts
+- World Bank or Data.gov for public indicators
+- OpenStreetMap for local context
+- WHO or CDC data for health impact
+
+### Why it matters
+Climate data becomes useful when it is tied to a place and the people who live there. The result should support decisions without hiding uncertainty or inventing predictions.
+
+## Use case 8: Community food access
+
+### Problem
+Residents and community organizations need a clear view of where affordable, nutritious food is available and where access gaps overlap with income and distance.
+
+### Typical goals
+- map groceries, markets, pantries, and meal programs
+- add nutrition and product context
+- compare food access across neighborhoods
+- help organizers target outreach and investment
+
+### Typical tool categories
+- food access and nutrition
+- public datasets
+- maps and geolocation
+- local discovery
+
+### Example stack
+- USDA FoodData Central for nutrition data
+- Open Food Facts for product and label data
+- US Census ACS for neighborhood context
+- OpenStreetMap for distance and map context
+- Overpass or Foursquare for local food resources
+
+### Why it matters
+Food access depends on distance, cost, and available options, not just the number of stores. Connecting nutrition data to local places helps communities see the gap and act on it.
+
+## Use case 9: Open research data
+
+### Problem
+Research outputs are spread across repositories and indexes, and ordinary search results often lose the DOI, license, and citation trail that make them reusable.
+
+### Typical goals
+- search datasets, preprints, and publications in one flow
+- preserve source metadata for every result
+- follow citations and related records
+- summarize retrieved evidence with links back to the source
+
+### Typical tool categories
+- research data and scholarly records
+- search and retrieval
+- AI workflows and retrieval
+
+### Example stack
+- Zenodo for datasets, software, and DOI records
+- arXiv for preprint metadata
+- OpenAlex and Crossref for scholarly metadata
+- OpenAI or Hugging Face Inference for summaries after retrieval
+
+### Why it matters
+Open research is only reusable when its provenance survives the search experience. Citations and licenses should be product features, not footnotes.
+
+## Use case 10: Housing affordability
+
+### Problem
+Rent numbers alone do not show whether housing is affordable. Residents, advocates, and planners need to compare rents with local incomes and neighborhood conditions.
+
+### Typical goals
+- compare rent benchmarks with household incomes
+- identify neighborhoods under the most pressure
+- add transit, services, and population context
+- produce an auditable briefing for housing decisions
+
+### Typical tool categories
+- housing and affordability data
+- public datasets
+- maps and geolocation
+- local discovery
+
+### Example stack
+- HUD Fair Market Rents and income limits for rent benchmarks
+- US Census ACS for income and tenure data
+- Data.gov or World Bank for additional public context
+- OpenStreetMap for neighborhood context
+- Overpass for nearby services and transit
+
+### Why it matters
+Affordability is a relationship between cost and income. Making that relationship visible helps communities ask better questions and prioritize action.
+
+## Use case 11: Transit access
+
+### Problem
+A transit map shows where vehicles go, but not whether people can reach jobs, groceries, schools, or health care.
+
+### Typical goals
+- show routes, stops, and service alerts
+- connect transit service to daily destinations
+- compare access across neighborhoods and times of day
+- add population and equity context
+
+### Typical tool categories
+- transit and mobility
+- maps and geolocation
+- local discovery
+- public datasets
+
+### Example stack
+- MBTA V3 API for Boston-area service and alerts
+- Transitland for aggregated feeds in other regions
+- OpenStreetMap for streets and map context
+- Overpass for destinations and daily needs
+- US Census ACS or Data.gov for population context
+
+### Why it matters
+Transit is infrastructure for reaching opportunity. Showing service next to destinations and population context turns a route map into a practical equity tool.
+
 ## How OpenToolHub uses these use cases
 
 Each use case in `data/use-cases.json` is connected to:

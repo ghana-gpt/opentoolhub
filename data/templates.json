@@ -78,5 +78,55 @@
     "tags": ["open-data", "dashboard", "transparency", "maps"],
     "path": "templates/public-data-dashboard/README.md",
     "status": "variant"
+  },
+  {
+    "id": "climate-resilience-dashboard",
+    "name": "Climate resilience dashboard",
+    "description": "Local climate hazards, weather context, public data, and community health indicators in one view.",
+    "use_case_ids": ["climate-resilience"],
+    "category_ids": ["weather", "public-data", "maps", "health-data"],
+    "tags": ["climate", "resilience", "weather", "public-data"],
+    "path": "templates/climate-resilience-dashboard/README.md",
+    "status": "starter"
+  },
+  {
+    "id": "food-access-map",
+    "name": "Food access map",
+    "description": "A map-first tool for food resources, nutrition context, and neighborhood access gaps.",
+    "use_case_ids": ["community-food-access"],
+    "category_ids": ["food-access", "public-data", "maps", "local-discovery"],
+    "tags": ["food", "nutrition", "maps", "community"],
+    "path": "templates/food-access-map/README.md",
+    "status": "starter"
+  },
+  {
+    "id": "open-research-explorer",
+    "name": "Open research explorer",
+    "description": "Search datasets and preprints, compare metadata, and follow citations back to the source.",
+    "use_case_ids": ["open-research-data"],
+    "category_ids": ["research-data", "search-and-retrieval", "ai-workflows"],
+    "tags": ["research", "datasets", "preprints", "citations"],
+    "path": "templates/open-research-explorer/README.md",
+    "status": "starter"
+  },
+  {
+    "id": "housing-affordability-explorer",
+    "name": "Housing affordability explorer",
+    "description": "Compare rent benchmarks, household incomes, and neighborhood context for a chosen area.",
+    "use_case_ids": ["housing-affordability"],
+    "category_ids": ["housing-data", "public-data", "maps", "local-discovery"],
+    "tags": ["housing", "rent", "affordability", "maps"],
+    "path": "templates/housing-affordability-explorer/README.md",
+    "status": "starter"
+  },
+  {
+    "id": "transit-access-map",
+    "name": "Transit access map",
+    "description": "Show transit stops, routes, service alerts, and the daily destinations people can reach.",
+    "use_case_ids": ["transit-access"],
+    "category_ids": ["transit", "maps", "local-discovery", "public-data"],
+    "tags": ["transit", "mobility", "maps", "accessibility"],
+    "path": "templates/transit-access-map/README.md",
+    "status": "starter"
   }
 ]

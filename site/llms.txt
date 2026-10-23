@@ -7,7 +7,7 @@ Canonical site: https://ghana-gpt.github.io/opentoolhub/
 ## Start here
 
 - [Builder](https://ghana-gpt.github.io/opentoolhub/index.html): describe an idea, choose areas and experience level, and get a path.
-- [Use cases](https://ghana-gpt.github.io/opentoolhub/use-cases.html): browse and search all six discovery paths.
+- [Use cases](https://ghana-gpt.github.io/opentoolhub/use-cases.html): browse and search all eleven discovery paths.
 - [A complete use case](https://ghana-gpt.github.io/opentoolhub/use-case.html?id=travel-planner): one path with its stack, APIs, template, and worked example.
 - [Stacks](https://ghana-gpt.github.io/opentoolhub/stacks.html): compare tool combinations and alternatives per slot.
 - [Templates](https://ghana-gpt.github.io/opentoolhub/templates.html): starter and variant projects that exist in this repository.

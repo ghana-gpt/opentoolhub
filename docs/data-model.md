@@ -41,12 +41,12 @@ The manifest uses one stable shape:
     "version": "1.0.0",
     "format": "JSON Schema draft 2020-12"
   },
-  "counts": { "use-cases": 6, "stacks": 6, "apis": 20 },
+  "counts": { "use-cases": 11, "stacks": 11, "apis": 30 },
   "files": {
     "use-cases": {
       "url": "https://ghana-gpt.github.io/opentoolhub/data/use-cases.json",
       "schema": "https://ghana-gpt.github.io/opentoolhub/schema.json#/$defs/UseCaseFile",
-      "count": 6,
+      "count": 11,
       "id_field": "id"
     }
   },

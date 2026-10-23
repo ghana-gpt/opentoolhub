@@ -194,5 +194,155 @@
     "notes": "Best for civic products that connect existing public information.",
     "difficulty": "medium",
     "best_for": ["civic tools", "nonprofit projects", "community portals"]
+  },
+  {
+    "id": "climate-resilience-stack",
+    "use_case": "climate-resilience",
+    "name": "Climate resilience stack",
+    "categories": ["weather", "public-data", "maps", "health-data"],
+    "tools": [
+      {
+        "slot": "Climate and weather data",
+        "category": "weather",
+        "api_ids": ["nasa-power", "noaa-nws"]
+      },
+      {
+        "slot": "Environmental and public data",
+        "category": "public-data",
+        "api_ids": ["worldbank", "data-gov"]
+      },
+      {
+        "slot": "Map and hazard context",
+        "category": "maps",
+        "api_ids": ["openstreetmap"]
+      },
+      {
+        "slot": "Health and community impact",
+        "category": "health-data",
+        "api_ids": ["who-gho", "cdc-data"]
+      }
+    ],
+    "notes": "Best for local risk briefings and adaptation planning where source dates and geography matter.",
+    "difficulty": "medium",
+    "best_for": ["climate dashboards", "adaptation planning", "community resilience"]
+  },
+  {
+    "id": "food-access-stack",
+    "use_case": "community-food-access",
+    "name": "Food access stack",
+    "categories": ["food-access", "public-data", "maps", "local-discovery"],
+    "tools": [
+      {
+        "slot": "Food and nutrition data",
+        "category": "food-access",
+        "api_ids": ["usda-fdc", "open-food-facts"]
+      },
+      {
+        "slot": "Community context",
+        "category": "public-data",
+        "api_ids": ["census-acs", "data-gov"]
+      },
+      {
+        "slot": "Map and distance context",
+        "category": "maps",
+        "api_ids": ["openstreetmap"]
+      },
+      {
+        "slot": "Local food resources",
+        "category": "local-discovery",
+        "api_ids": ["overpass", "foursquare"]
+      }
+    ],
+    "notes": "Best for food resource maps that combine nutrition data, neighborhood context, and local places.",
+    "difficulty": "medium",
+    "best_for": ["food access maps", "nutrition tools", "community food programs"]
+  },
+  {
+    "id": "open-research-stack",
+    "use_case": "open-research-data",
+    "name": "Open research stack",
+    "categories": ["research-data", "search-and-retrieval", "ai-workflows"],
+    "tools": [
+      {
+        "slot": "Research repository",
+        "category": "research-data",
+        "api_ids": ["zenodo", "arxiv"]
+      },
+      {
+        "slot": "Scholarly metadata",
+        "category": "search-and-retrieval",
+        "api_ids": ["openalex", "crossref"]
+      },
+      {
+        "slot": "Summarization and synthesis",
+        "category": "ai-workflows",
+        "api_ids": ["openai", "huggingface-inference"]
+      }
+    ],
+    "notes": "Best for literature and dataset discovery where every claim can be traced to a DOI or record.",
+    "difficulty": "high",
+    "best_for": ["literature review", "dataset discovery", "reproducible research"]
+  },
+  {
+    "id": "housing-affordability-stack",
+    "use_case": "housing-affordability",
+    "name": "Housing affordability stack",
+    "categories": ["housing-data", "public-data", "maps", "local-discovery"],
+    "tools": [
+      {
+        "slot": "Rent and income data",
+        "category": "housing-data",
+        "api_ids": ["hud-fmr", "census-acs"]
+      },
+      {
+        "slot": "Public context",
+        "category": "public-data",
+        "api_ids": ["data-gov", "worldbank"]
+      },
+      {
+        "slot": "Neighborhood map",
+        "category": "maps",
+        "api_ids": ["openstreetmap"]
+      },
+      {
+        "slot": "Local services and amenities",
+        "category": "local-discovery",
+        "api_ids": ["overpass"]
+      }
+    ],
+    "notes": "Best for comparing rent benchmarks with local incomes and neighborhood context.",
+    "difficulty": "medium",
+    "best_for": ["rent trackers", "affordability analysis", "housing policy tools"]
+  },
+  {
+    "id": "transit-access-stack",
+    "use_case": "transit-access",
+    "name": "Transit access stack",
+    "categories": ["transit", "maps", "local-discovery", "public-data"],
+    "tools": [
+      {
+        "slot": "Transit service data",
+        "category": "transit",
+        "api_ids": ["mbta", "transitland"]
+      },
+      {
+        "slot": "Map and stop context",
+        "category": "maps",
+        "api_ids": ["openstreetmap"]
+      },
+      {
+        "slot": "Destinations and daily needs",
+        "category": "local-discovery",
+        "api_ids": ["overpass"]
+      },
+      {
+        "slot": "Equity and population context",
+        "category": "public-data",
+        "api_ids": ["census-acs", "data-gov"]
+      }
+    ],
+    "notes": "Best for showing how transit connects people to jobs, services, and everyday destinations.",
+    "difficulty": "medium",
+    "best_for": ["transit access maps", "commute tools", "mobility research"]
   }
 ]
