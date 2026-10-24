@@ -213,6 +213,14 @@ class SiteTests(unittest.TestCase):
                     self.assertEqual(len(listing["itemListElement"]), len(source[expected]))
                     for item in listing["itemListElement"]:
                         self.assertTrue(item["url"].startswith("http"))
+                    if page == "apis.html":
+                        records = source["apis"]
+                        for item, record in zip(listing["itemListElement"], records):
+                            with self.subTest(api=record["id"]):
+                                self.assertEqual(item["name"], record["name"])
+                                self.assertEqual(item["url"], record["url"])
+                                self.assertEqual(item["description"], record["description"])
+                                self.assertEqual(item["sameAs"], record["docs_url"])
 
     def test_schema_definitions_cover_every_data_file(self):
         schema = json.loads((SITE / "schema.json").read_text(encoding="utf-8"))

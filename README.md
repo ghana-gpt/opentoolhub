@@ -166,8 +166,8 @@ make check
 That is equivalent to running the validator with `--strict`, the test suite,
 the staging build, and the staged-copy check. CI runs the same checks on every
 pull request, then performs a recommender smoke test. The Pages workflow
-validates and tests the data, stages it, verifies the artifact, and deploys
-`site/` only after those steps pass.
+validates the data, runs the tests, syntax-checks the JavaScript, stages it,
+verifies the artifact, and deploys `site/` only after those steps pass.
 
 ## Live site
 

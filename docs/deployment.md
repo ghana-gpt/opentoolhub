@@ -87,10 +87,11 @@ committed, and that is not the supported workflow.
 
 1. Checks out the repository and installs Python 3.12.
 2. Runs `validate.py --strict` and the test suite.
-3. Runs `build_site.py` to create `site/data/*.json`.
-4. Runs `build_site.py --check` and verifies the required files exist.
-5. Uploads the `site/` directory as the Pages artifact.
-6. Deploys it with the official `actions/deploy-pages` action.
+3. Installs Node 20 and syntax-checks every `site/js/*.js` module.
+4. Runs `build_site.py` to create `site/data/*.json`.
+5. Runs `build_site.py --check` and verifies the required files exist.
+6. Uploads the `site/` directory as the Pages artifact.
+7. Deploys it with the official `actions/deploy-pages` action.
 
 `site/data/` is gitignored because it is generated. The workflow creates it in
 the runner before `actions/upload-pages-artifact` runs, and the artifact includes

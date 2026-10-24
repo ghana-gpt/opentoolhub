@@ -198,7 +198,7 @@
     "id": "cdc-data",
     "name": "CDC Open Data",
     "url": "https://data.cdc.gov/",
-    "docs_url": "https://data.cdc.gov/about",
+    "docs_url": "https://dev.socrata.com/foundry/data.cdc.gov/",
     "category_ids": ["health-data", "public-data"],
     "description": "US public-health datasets and surveillance indicators.",
     "best_for": ["public health", "surveillance", "open data"],
