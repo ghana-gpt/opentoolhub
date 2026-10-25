@@ -30,6 +30,7 @@ PAGE_SCRIPTS = {
     "stacks.html": "js/stacks.js",
     "templates.html": "js/templates.js",
     "apis.html": "js/apis.js",
+    "ai.html": "js/ai.js",
 }
 
 PAGE_FILES = tuple(sorted(path.name for path in SITE.glob("*.html")))
@@ -197,7 +198,7 @@ class SiteTests(unittest.TestCase):
                         node for node in nodes if node["@type"] == "DataCatalog"
                     )
                     self.assertEqual(len(catalog["dataset"]), 6)
-                elif page == "use-case.html":
+                elif page in {"use-case.html", "ai.html"}:
                     self.assertIn("WebPage", types)
                     self.assertNotIn("ItemList", types)
                 else:

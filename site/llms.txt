@@ -1,6 +1,6 @@
 # OpenToolHub
 
-> OpenToolHub is a static, builder-first catalog of public APIs, open data, starter stacks, templates, and worked examples. Start with a plain-language project idea and follow it to a use case, a stack, an API, and a starting point. There is no backend and no model call.
+> OpenToolHub is a static, builder-first catalog of public APIs, open data, starter stacks, templates, and worked examples. Start with a plain-language project idea and follow it to a use case, a stack, an API, and a starting point. There is no backend and the published site makes no model call.
 
 Canonical site: https://ghana-gpt.github.io/opentoolhub/
 
@@ -12,6 +12,7 @@ Canonical site: https://ghana-gpt.github.io/opentoolhub/
 - [Stacks](https://ghana-gpt.github.io/opentoolhub/stacks.html): compare tool combinations and alternatives per slot.
 - [Templates](https://ghana-gpt.github.io/opentoolhub/templates.html): starter and variant projects that exist in this repository.
 - [APIs](https://ghana-gpt.github.io/opentoolhub/apis.html): auth, pricing model, integration complexity, and data freshness.
+- [Local AI](https://ghana-gpt.github.io/opentoolhub/ai.html): optional, local-only panel. The published page explains how to run `scripts/ai_proxy.py` with your own provider; it makes no model call and holds no key.
 
 ## Machine-readable catalog
 
@@ -40,6 +41,7 @@ The browser builder and `scripts/recommend.py` share the `deterministic-lexical-
 ## Constraints
 
 - Deterministic keyword matching only; there is no hosted search or AI service.
+- The optional AI layer is developer-local and off by default: `site/ai.html` only calls `/api/ai/` when a loopback proxy from `scripts/ai_proxy.py` is running, and keys come from the operator's environment.
 - The catalog is curated, not exhaustive. Provider terms must be checked at the source.
 - The site is static HTML, CSS, JavaScript, and JSON, deployable on GitHub Pages under a repository subpath.
 - Source repository: https://github.com/ghana-gpt/opentoolhub

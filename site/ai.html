@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Local AI | OpenToolHub</title>
+    <meta
+      name="description"
+      content="Optional local AI for OpenToolHub: ask your own Ollama or hosted model about the catalog through a loopback-only endpoint. The published site never calls a model."
+    />
+    <link rel="canonical" href="https://ghana-gpt.github.io/opentoolhub/ai.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="OpenToolHub" />
+    <meta property="og:title" content="Local AI | OpenToolHub" />
+    <meta property="og:description" content="Optional local AI for OpenToolHub: ask your own Ollama or hosted model about the catalog through a loopback-only endpoint. The published site never calls a model." />
+    <meta property="og:url" content="https://ghana-gpt.github.io/opentoolhub/ai.html" />
+    <meta property="og:image" content="https://ghana-gpt.github.io/opentoolhub/social-card.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="OpenToolHub: start with an idea, leave with a working stack." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Local AI | OpenToolHub" />
+    <meta name="twitter:description" content="Optional local AI for OpenToolHub: ask your own Ollama or hosted model about the catalog through a loopback-only endpoint. The published site never calls a model." />
+    <meta name="twitter:image" content="https://ghana-gpt.github.io/opentoolhub/social-card.png" />
+    <link rel="stylesheet" href="styles.css" />
+    <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://ghana-gpt.github.io/opentoolhub/#website",
+      "url": "https://ghana-gpt.github.io/opentoolhub/",
+      "name": "OpenToolHub",
+      "inLanguage": "en"
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://ghana-gpt.github.io/opentoolhub/ai.html#page",
+      "url": "https://ghana-gpt.github.io/opentoolhub/ai.html",
+      "name": "Local AI",
+      "description": "Optional local AI for OpenToolHub: ask your own Ollama or hosted model about the catalog through a loopback-only endpoint.",
+      "isPartOf": {
+        "@id": "https://ghana-gpt.github.io/opentoolhub/#website"
+      }
+    }
+  ]
+}
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="site-header">
+      <div class="container nav-bar">
+        <a href="index.html" class="brand">OpenToolHub</a>
+        <nav class="nav-links" aria-label="Primary">
+          <a href="index.html">Build</a>
+          <a href="use-cases.html">Use cases</a>
+          <a href="stacks.html">Stacks</a>
+          <a href="templates.html">Templates</a>
+          <a href="apis.html">APIs</a>
+          <a href="ai.html" aria-current="page">AI</a>
+        </nav>
+        <a class="button primary" href="https://github.com/ghana-gpt/opentoolhub">GitHub</a>
+      </div>
+    </header>
+
+    <main id="main" class="page-shell">
+      <div class="container">
+        <header class="page-header">
+          <span class="eyebrow">Optional and local</span>
+          <h1>Ask your own model</h1>
+          <p class="lead">
+            This panel talks to an AI provider you run on this machine. The
+            published site has no backend and never calls a model, so without
+            <code>scripts/ai_proxy.py</code> running you will see setup steps
+            instead of a prompt box. Nothing you type is sent to OpenToolHub.
+          </p>
+        </header>
+
+        <p id="ai-status-text" class="results-count" aria-live="polite">
+          Checking for a local AI endpoint…
+        </p>
+        <div id="ai-status" class="panel" aria-live="polite"></div>
+
+        <form id="ai-form" class="panel" hidden>
+          <h2>Ask a question</h2>
+          <p class="hint">
+            Prompts go to the provider you configured and nowhere else. Keys stay
+            in the proxy process; the browser never receives one.
+          </p>
+          <div class="field">
+            <label for="ai-prompt">Your prompt</label>
+            <textarea
+              id="ai-prompt"
+              name="prompt"
+              rows="4"
+              maxlength="4000"
+              placeholder="Which OpenToolHub use case fits a city air-quality dashboard, and which APIs would I need?"
+              required
+            ></textarea>
+          </div>
+          <div class="field inline">
+            <label for="ai-provider">Provider</label>
+            <select id="ai-provider" class="select">
+              <option value="">Fallback order</option>
+            </select>
+          </div>
+          <div class="cta-row">
+            <button type="submit" id="ai-ask" class="button primary">
+              Ask the model
+            </button>
+            <a class="button secondary" href="https://github.com/ghana-gpt/opentoolhub/blob/main/docs/local-ai.md" rel="noopener">Setup guide</a>
+          </div>
+        </form>
+
+        <div id="ai-answer" class="panel" aria-live="polite" hidden></div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-grid">
+        <p>OpenToolHub maps public tools to real projects.</p>
+        <p class="small muted">
+          The catalog works without AI. This page is an optional local tool, and
+          the published site never sends a prompt anywhere.
+        </p>
+      </div>
+    </footer>
+
+    <script type="module" src="js/ai.js"></script>
+  </body>
+</html>

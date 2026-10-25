@@ -1308,6 +1308,39 @@ select.select {
   }
 }
 
+/* Optional local AI panel (ai.html). */
+.ai-provider {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.ai-provider:last-of-type {
+  border-bottom: 0;
+}
+
+.ai-provider p {
+  margin: 2px 0 0;
+}
+
+.ai-answer-text {
+  margin: 0 0 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.95rem;
+}
+
+.ai-attempts {
+  margin: 0 0 16px;
+  padding-left: 20px;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;

@@ -60,3 +60,9 @@ REPOSITORY_URL = (
 SCHEMA_VERSION = "1.0.0"
 HOST = os.environ.get("OPEN_TOOL_HUB_HOST", "").strip() or "127.0.0.1"
 PORT = _int_from_env("OPEN_TOOL_HUB_PORT", 8000)
+
+#: Address for the optional local AI proxy (scripts/ai_proxy.py). Loopback by
+#: default: the proxy can spend the user's provider credits, so it should not
+#: be reachable from a network unless the user opts in with --allow-remote.
+AI_HOST = os.environ.get("OPEN_TOOL_HUB_AI_HOST", "").strip() or "127.0.0.1"
+AI_PORT = _int_from_env("OPEN_TOOL_HUB_AI_PORT", 8787)

@@ -1,0 +1,25 @@
+{
+  "$comment": "Copy to ai-providers.local.json (gitignored) or point OPEN_TOOL_HUB_AI_CONFIG at this file. Order is the fallback order: the first ready provider that answers wins. Never put a key or token value here: name the environment variable that holds it with api_key_env. scripts/ai_config.py rejects api_key, token, secret, and password fields loudly. See docs/local-ai.md for every field and adapter kind.",
+  "providers": [
+    {
+      "id": "local",
+      "label": "Ollama on this machine",
+      "kind": "ollama",
+      "model": "phi3:mini",
+      "base_url": "http://127.0.0.1:11434",
+      "timeout": 120,
+      "max_tokens": 512,
+      "enabled": false
+    },
+    {
+      "id": "cloud",
+      "label": "Hosted OpenAI-compatible model",
+      "kind": "openai",
+      "model": "gpt-4o-mini",
+      "api_key_env": "OPENAI_API_KEY",
+      "timeout": 60,
+      "max_tokens": 512,
+      "enabled": false
+    }
+  ]
+}
