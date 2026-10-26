@@ -36,19 +36,28 @@ unregistered use cases and categories that no use case or API uses. Run it with
 
 ### Recommender (`scripts/recommend.py`)
 
-Indexes the data, normalizes text (lowercase, accents, punctuation), removes
-filler words, and scores candidates:
+Indexes the data by field weight, normalizes text (lowercase, accents,
+punctuation), removes filler words, stems plurals and `-ise` spellings, and
+scores candidates:
 
 | Match | Score |
 | --- | --- |
 | Exact id | 100 |
 | Exact name | 95 |
 | Exact alias | 90 |
-| All query tokens in the search document | 80–89 |
-| At least half the tokens | 40–79 |
+| Weighted keyword match | 55–88 |
+
+Keyword scores combine idf-weighted field coverage with term rarity
+(`50 + round(38 * coverage * (0.6 + 0.4 * rarity))`), so a rare keyword in a
+name or alias outranks filler shared by every use case. A candidate must cover
+half the query unless one distinctive term carries it alone. Tokens of five or
+more characters also match within one edit or adjacent transposition, scored at
+0.8 of their field weight, so `travle` still finds `travel`.
 
 A score below 90 with a runner-up within 5 points sets
-`needs_disambiguation` and includes alternatives. The result resolves stack
+`needs_disambiguation` and includes alternatives. When nothing clears the
+threshold, the CLI prints the closest partial matches and the browser lists them
+as "Closest use cases". The result resolves stack
 tools to full API records, templates, examples, and a short rationale. The CLI
 exposes text, `--json`, and `--list` modes.
 
@@ -60,7 +69,7 @@ Plain ES modules with no framework:
 - `js/ui.js` holds escaping, URL-state, and badge helpers.
 - `js/render.js` contains reusable card and tool markup.
 - One controller per page: `home.js`, `use-cases.js`, `use-case.js`,
-  `stacks.js`, `templates.js`, and `apis.js`.
+  `stacks.js`, `templates.js`, `template.js`, and `apis.js`.
 
 Browsers cannot fetch `../data/*.json` from a served `site/` directory, so
 `scripts/build_site.py` copies the files to `site/data/` and `--check` detects a
@@ -73,9 +82,11 @@ one-request clients.
 
 Each page's static head carries canonical, Open Graph, Twitter card, and
 schema.org JSON-LD metadata. Collection pages publish a `CollectionPage` and
-`ItemList`, the home page publishes a `DataCatalog`, and `use-case.js` replaces
-the generic detail-page metadata with the resolved use case's canonical URL and
-`TechArticle` after loading the JSON.
+`ItemList`, the home page publishes a `DataCatalog`, and the two detail
+controllers replace the generic metadata after loading the JSON:
+`use-case.js` publishes the resolved use case's canonical URL and `TechArticle`,
+while `template.js` publishes a `WebPage` plus a three-level `BreadcrumbList`
+(site, templates index, template) for the requested template.
 
 ### Deployment
 

@@ -1113,6 +1113,64 @@ class CliTests(unittest.TestCase):
         self.assertEqual(code, 3)
         self.assertIn("none is ready", err)
 
+    def test_check_without_configuration_exits_three(self):
+        code, _, err = self.run_cli(["--check"], {})
+        self.assertEqual(code, 3)
+        self.assertIn("no AI providers are configured", err)
+
+    def run_check_cli(
+        self, *payloads: Any, argv: list[str] | None = None
+    ) -> tuple[int, str, str, RecordingTransport]:
+        """Run ``--check`` against an injected Ollama transport (no network)."""
+        transport = RecordingTransport(*payloads)
+        provider = OllamaProvider(
+            spec("local", "ollama", base_url="http://127.0.0.1:11434"),
+            transport=transport,
+        )
+        chain = AIChain([provider])
+        out, err = io.StringIO(), io.StringIO()
+        with mock.patch.object(ai_chat, "build_chain", return_value=chain):
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                code = ai_chat.main(argv or ["--check"])
+        return code, out.getvalue(), err.getvalue(), transport
+
+    def test_check_makes_one_real_request_and_reports_the_answer(self):
+        code, out, err, transport = self.run_check_cli(
+            {"message": {"role": "assistant", "content": "Ready."}}
+        )
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        self.assertIn("OK: local / test-model", out)
+        self.assertIn("Ready.", out)
+        self.assertEqual(len(transport.calls), 1)
+        self.assertTrue(transport.calls[0]["url"].endswith("/api/chat"))
+        self.assertEqual(
+            transport.calls[0]["body"]["messages"][0]["content"], ai_chat.CHECK_PROMPT
+        )
+
+    def test_check_json_is_machine_readable(self):
+        code, out, _, _ = self.run_check_cli(
+            {"message": {"role": "assistant", "content": "ready"}},
+            argv=["--check", "--json"],
+        )
+        payload = json.loads(out)
+        self.assertEqual(code, 0)
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["provider"], "local")
+        self.assertEqual(payload["model"], "test-model")
+        self.assertEqual(payload["reply"], "ready")
+        self.assertFalse(payload["fallback_used"])
+        self.assertIsInstance(payload["latency_ms"], int)
+        self.assertEqual(len(payload["attempts"]), 1)
+        self.assertEqual(payload["attempts"][0]["provider_id"], "local")
+        self.assertEqual(payload["attempts"][0]["status"], "ok")
+
+    def test_check_exits_four_when_the_only_provider_fails(self):
+        code, out, err, _ = self.run_check_cli(ProviderError("boom"))
+        self.assertEqual(code, 4)
+        self.assertEqual(out, "")
+        self.assertIn("No AI provider answered", err)
+
     def test_unknown_provider_exits_two(self):
         env = {
             "OPEN_TOOL_HUB_AI_PROVIDERS": "local",

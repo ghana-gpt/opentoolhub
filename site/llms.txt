@@ -11,6 +11,7 @@ Canonical site: https://ghana-gpt.github.io/opentoolhub/
 - [A complete use case](https://ghana-gpt.github.io/opentoolhub/use-case.html?id=travel-planner): one path with its stack, APIs, template, and worked example.
 - [Stacks](https://ghana-gpt.github.io/opentoolhub/stacks.html): compare tool combinations and alternatives per slot.
 - [Templates](https://ghana-gpt.github.io/opentoolhub/templates.html): starter and variant projects that exist in this repository.
+- [A starter template](https://ghana-gpt.github.io/opentoolhub/template.html?id=travel-app): one brief with its use case, stack, APIs to call, ordered build steps, and a copyable JSON plan.
 - [APIs](https://ghana-gpt.github.io/opentoolhub/apis.html): auth, pricing model, integration complexity, and data freshness.
 - [Local AI](https://ghana-gpt.github.io/opentoolhub/ai.html): optional, local-only panel. The published page explains how to run `scripts/ai_proxy.py` with your own provider; it makes no model call and holds no key.
 
@@ -36,7 +37,7 @@ Every page reads the same validated JSON arrays. These URLs are public and can b
 3. Follow `template_ids` into `data/templates.json` and `example` into `data/examples.json`.
 4. Cite the API's official `url` and `docs_url`; do not invent pricing, limits, or availability.
 
-The browser builder and `scripts/recommend.py` share the `deterministic-lexical-v1` contract recorded under `recommendation` in the manifest: the same normalized search document, stopwords, exact-match scores, partial-match threshold, and name tie-break. The browser adds optional area checkboxes as a filter; they do not change the text score.
+The browser builder and `scripts/recommend.py` share the `deterministic-lexical-v2` contract recorded under `recommendation` in the manifest: the same normalized and stemmed search document, field weights, stopwords, idf-weighted coverage, exact-match scores, fuzzy tolerance, no-match fallback, and name tie-break. The browser adds optional area checkboxes as a filter; they do not change the text score.
 
 ## Constraints
 

@@ -63,6 +63,59 @@ class RankingTests(unittest.TestCase):
         self.assertEqual(result["use_case"]["id"], "city-dashboard")
         self.assertEqual(result["matched_by"], "keywords")
 
+    def test_stemming_matches_plurals(self):
+        result = recommend.build_recommendation("city dashboards", DATA)
+        self.assertEqual(result["use_case"]["id"], "city-dashboard")
+        self.assertEqual(result["matched_by"], "keywords")
+        self.assertGreaterEqual(result["score"], recommend.MIN_KEYWORD_SCORE)
+        self.assertLessEqual(result["score"], recommend.MAX_KEYWORD_SCORE)
+
+    def test_british_and_american_spellings_collapse(self):
+        self.assertEqual(
+            recommend.stem("visualisations"), recommend.stem("visualization")
+        )
+        self.assertEqual(recommend.stem("visualise"), recommend.stem("visualization"))
+        result = recommend.build_recommendation("vaccinations", DATA)
+        self.assertEqual(result["use_case"]["id"], "public-health-platform")
+
+    def test_stopwords_are_dropped_before_scoring(self):
+        self.assertEqual(
+            recommend.tokenize("Build an app for my city dashboards"),
+            recommend.tokenize("city dashboards"),
+        )
+
+    def test_typo_still_matches(self):
+        result = recommend.build_recommendation("travle app", DATA)
+        self.assertEqual(result["use_case"]["id"], "travel-planner")
+        self.assertEqual(result["matched_by"], "fuzzy")
+        self.assertLess(result["score"], 90)
+
+    def test_transposition_typo_still_matches(self):
+        result = recommend.build_recommendation("fligths to rome", DATA)
+        self.assertEqual(result["use_case"]["id"], "travel-planner")
+        self.assertEqual(result["matched_by"], "fuzzy")
+
+    def test_within_one_edit(self):
+        self.assertTrue(recommend._within_one_edit("city", "ctiy"))
+        self.assertTrue(recommend._within_one_edit("travel", "travle"))
+        self.assertTrue(recommend._within_one_edit("travel", "trave"))
+        self.assertFalse(recommend._within_one_edit("travel", "trouble"))
+
+    def test_short_tokens_are_not_fuzzy_matched(self):
+        self.assertIsNone(recommend._fuzzy_term("cit", {"city"}))
+
+    def test_single_distinctive_keyword_matches(self):
+        result = recommend.build_recommendation("food bank locator", DATA)
+        self.assertEqual(result["use_case"]["id"], "community-food-access")
+
+    def test_ambiguous_keyword_is_flagged(self):
+        result = recommend.build_recommendation("dashboard", DATA)
+        self.assertTrue(result["needs_disambiguation"])
+        self.assertTrue(result["alternatives"])
+        best = result["score"]
+        self.assertLess(best, 90)
+        self.assertGreaterEqual(result["alternatives"][0]["score"], best - 5)
+
     def test_unknown_query_lists_suggestions(self):
         with self.assertRaises(recommend.NoMatchError) as caught:
             recommend.build_recommendation("quantum welding torch", DATA)
@@ -70,6 +123,30 @@ class RankingTests(unittest.TestCase):
             caught.exception.suggestions,
             [use_case["id"] for use_case in DATA["use_cases"]],
         )
+        self.assertEqual(caught.exception.closest, [])
+
+    def test_unknown_query_offers_closest_matches(self):
+        with self.assertRaises(recommend.NoMatchError) as caught:
+            recommend.build_recommendation("stock market prices", DATA)
+        closest = caught.exception.closest
+        self.assertTrue(closest)
+        self.assertLessEqual(len(closest), 3)
+        for item in closest:
+            self.assertIn(item["id"], DATA["use_case_by_id"])
+            self.assertTrue(item["matched"])
+            self.assertGreater(item["coverage"], 0)
+
+    def test_suggest_orders_by_evidence(self):
+        closest = recommend.suggest("dashboard", DATA, limit=2)
+        self.assertEqual(len(closest), 2)
+        keys = [(-len(item["matched"]), -item["coverage"]) for item in closest]
+        self.assertEqual(keys, sorted(keys))
+
+    def test_rank_orders_by_score_then_name(self):
+        ranked = recommend.rank("dashboard", DATA)
+        self.assertGreaterEqual(len(ranked), 2)
+        keys = [(-item["score"], item["use_case"]["name"].lower()) for item in ranked]
+        self.assertEqual(keys, sorted(keys))
 
     def test_empty_query_does_not_match(self):
         with self.assertRaises(recommend.NoMatchError):
@@ -129,6 +206,20 @@ class CliTests(unittest.TestCase):
         completed = run_cli("quantum welding torch")
         self.assertEqual(completed.returncode, 2)
         self.assertIn("No use case matched", completed.stderr)
+        self.assertNotIn("Closest matches:", completed.stderr)
+
+    def test_unknown_query_prints_closest_matches(self):
+        completed = run_cli("stock market prices")
+        self.assertEqual(completed.returncode, 2)
+        self.assertIn("No use case matched", completed.stderr)
+        self.assertIn("Closest matches:", completed.stderr)
+
+    def test_typo_query_json_reports_fuzzy_match(self):
+        completed = run_cli("--json", "travle app")
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        payload = json.loads(completed.stdout)
+        self.assertEqual(payload["use_case"]["id"], "travel-planner")
+        self.assertEqual(payload["matched_by"], "fuzzy")
 
     def test_missing_query_exit_code(self):
         completed = run_cli()

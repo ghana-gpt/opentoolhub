@@ -32,7 +32,17 @@ from config import (
     SITE_DIR,
     SITE_URL,
 )
-from recommend import STOPWORDS
+from recommend import (
+    FUZZY_MIN_WEIGHT,
+    FUZZY_WEIGHT,
+    KEYWORD_SCORE_FLOOR,
+    KEYWORD_SCORE_SPAN,
+    MAX_KEYWORD_SCORE,
+    MIN_COVERAGE,
+    MIN_KEYWORD_SCORE,
+    STEM_RULES,
+    STOPWORDS,
+)
 
 CATALOG_FILE = "catalog.json"
 CATALOG_FILES = (
@@ -181,7 +191,7 @@ def build_catalog_manifest(sources: list[Path]) -> dict[str, Any]:
             "llms": f"{SITE_URL}llms.txt",
         },
         "recommendation": {
-            "engine": "deterministic-lexical-v1",
+            "engine": "deterministic-lexical-v2",
             "mode": "offline; no backend and no model call",
             "fields": [
                 "id",
@@ -195,21 +205,58 @@ def build_catalog_manifest(sources: list[Path]) -> dict[str, Any]:
                 "stack names, best_for, and tool slots",
                 "template names",
             ],
+            "field_weights": {
+                "name and aliases": 4,
+                "keywords": 3,
+                "summary, goal, category names and aliases, stack names, "
+                "template names": 2,
+                "personas, stack best_for, tool slots": 1,
+            },
             "exact_match_fields": ["id", "name", "aliases"],
             "normalization": (
                 "Unicode NFKD, ASCII, lowercase, non-alphanumeric runs to spaces"
             ),
+            "stemming": {
+                "rules": [
+                    f"{suffix} -> {replacement}" for suffix, replacement in STEM_RULES
+                ],
+                "plurals": "ies -> y, -sses -> -ss, other trailing s removed",
+                "endings": "ing and ed removed after the -ise rules",
+            },
             "stopwords": sorted(STOPWORDS),
             "scoring": {
                 "id_exact": 100,
                 "name_exact": 95,
                 "alias_exact": 90,
-                "all_keyword_tokens": (
-                    "80 (+5 when every token occurs in the name, capped at 89)"
+                "keyword": (
+                    f"{KEYWORD_SCORE_FLOOR} + round({KEYWORD_SCORE_SPAN} * coverage "
+                    "* (0.6 + 0.4 * rarity)), capped at "
+                    f"{MAX_KEYWORD_SCORE}, dropped below {MIN_KEYWORD_SCORE}"
                 ),
-                "partial_keyword_tokens": (
-                    "40 + floor(matched_tokens / query_tokens * 40), "
-                    "requires at least half the tokens"
+                "coverage": (
+                    "idf-weighted matched field weight divided by the maximum "
+                    "idf-weighted weight available for the query tokens"
+                ),
+                "idf": (
+                    "log(1 + use_cases / document_frequency); unseen terms are 1"
+                ),
+                "gate": (
+                    f"coverage >= {MIN_COVERAGE}, or a single distinctive term "
+                    "(field weight >= 3 shared by at most 2 use cases)"
+                ),
+                "fuzzy": (
+                    "one edit or adjacent transposition for tokens of 5+ characters, "
+                    f"field weight >= {FUZZY_MIN_WEIGHT}, weighted at {FUZZY_WEIGHT}"
+                ),
+            },
+            "fallback": {
+                "no_match": (
+                    "NoMatchError carries every use case id plus the closest partial "
+                    "matches; the browser lists those as closest use cases"
+                ),
+                "disambiguation": (
+                    "needs_disambiguation when the best score is below 90 and a "
+                    "runner-up is within 5 points"
                 ),
             },
             "tie_break": "score descending, then lowercase name ascending",

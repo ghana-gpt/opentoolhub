@@ -30,6 +30,7 @@ PAGE_SCRIPTS = {
     "stacks.html": "js/stacks.js",
     "templates.html": "js/templates.js",
     "apis.html": "js/apis.js",
+    "template.html": "js/template.js",
     "ai.html": "js/ai.js",
 }
 
@@ -198,7 +199,7 @@ class SiteTests(unittest.TestCase):
                         node for node in nodes if node["@type"] == "DataCatalog"
                     )
                     self.assertEqual(len(catalog["dataset"]), 6)
-                elif page in {"use-case.html", "ai.html"}:
+                elif page in {"use-case.html", "template.html", "ai.html"}:
                     self.assertIn("WebPage", types)
                     self.assertNotIn("ItemList", types)
                 else:
@@ -266,7 +267,7 @@ class SiteTests(unittest.TestCase):
 
     def test_browser_recommender_matches_the_published_contract(self):
         contract = catalog_manifest()["recommendation"]
-        self.assertEqual(contract["engine"], "deterministic-lexical-v1")
+        self.assertEqual(contract["engine"], "deterministic-lexical-v2")
         self.assertEqual(contract["exact_match_fields"], ["id", "name", "aliases"])
         self.assertEqual(contract["stopwords"], sorted(recommend.STOPWORDS))
 
@@ -280,12 +281,26 @@ class SiteTests(unittest.TestCase):
         )
         for field in ("category.aliases", "stack.best_for", "tool.slot", "templateById"):
             self.assertIn(field, data_js)
+        for constant in (
+            f"MAX_TOKEN_WEIGHT = {recommend.MAX_TOKEN_WEIGHT}",
+            f"MIN_COVERAGE = {recommend.MIN_COVERAGE}",
+            f"KEYWORD_SCORE_FLOOR = {recommend.KEYWORD_SCORE_FLOOR}",
+            f"KEYWORD_SCORE_SPAN = {recommend.KEYWORD_SCORE_SPAN}",
+            f"MAX_KEYWORD_SCORE = {recommend.MAX_KEYWORD_SCORE}",
+            f"FUZZY_WEIGHT = {recommend.FUZZY_WEIGHT}",
+            f"MIN_KEYWORD_SCORE = {recommend.MIN_KEYWORD_SCORE}",
+            f"FUZZY_MIN_WEIGHT = {recommend.FUZZY_MIN_WEIGHT}",
+        ):
+            self.assertIn(constant, data_js)
+        for suffix, replacement in recommend.STEM_RULES:
+            self.assertIn(f'["{suffix}", "{replacement}"]', data_js)
+        for helper in ("buildSearchIndex", "scoreUseCases", "suggestUseCases"):
+            self.assertIn(f"export function {helper}", data_js)
 
         home_js = (SITE / "js" / "home.js").read_text(encoding="utf-8")
-        for score in ("score: 100", "score: 95", "score: 90", "Math.min(89, 80 + bonus)"):
-            self.assertIn(score, home_js)
-        self.assertIn("40 + Math.floor(ratio * 40)", home_js)
-        self.assertIn("ratio < 0.5", home_js)
+        self.assertIn("suggestUseCases(", home_js)
+        self.assertIn("Closest use cases", home_js)
+        self.assertNotIn("Math.min(89, 80 + bonus)", home_js)
 
     def test_local_assets_and_links_exist(self):
         for page in PAGE_SCRIPTS:
@@ -308,16 +323,37 @@ class SiteTests(unittest.TestCase):
 
     def test_js_selectors_have_targets(self):
         selector = re.compile(r"""(?:qs|querySelector)\(\s*["']#([A-Za-z0-9_-]+)""")
+        emitted = re.compile(r'id="([A-Za-z0-9_-]+)"')
         for page, script in PAGE_SCRIPTS.items():
             parsed = parse_page(page)
             code = (SITE / script).read_text(encoding="utf-8")
+            # Some ids only exist after the script renders its own markup;
+            # accept those, but still reject ids that nothing ever emits.
+            generated = set(emitted.findall(code))
             with self.subTest(page=page):
                 for element_id in sorted(set(selector.findall(code))):
                     self.assertIn(
                         element_id,
-                        parsed.ids,
-                        f"{script} selects #{element_id}, absent from {page}",
+                        parsed.ids | generated,
+                        f"{script} selects #{element_id}, absent from {page} "
+                        f"and not emitted by {script}",
                     )
+
+    def test_template_detail_emits_linked_sections(self):
+        code = (SITE / "js" / "template.js").read_text(encoding="utf-8")
+        for element_id in (
+            "what",
+            "build-order",
+            "apis",
+            "copy-brief",
+            "examples",
+            "related",
+        ):
+            with self.subTest(element_id=element_id):
+                self.assertIn(f'id="{element_id}"', code)
+        for marker in ("data-copy-brief", "buildBrief(", "brief-code"):
+            with self.subTest(marker=marker):
+                self.assertIn(marker, code)
 
     def test_area_filters_and_catalog_context(self):
         expected = {
@@ -441,6 +477,14 @@ class SiteTests(unittest.TestCase):
             with self.subTest(use_case=use_case["id"]):
                 self.assertIn(expected, locations)
 
+        templates = json.loads(
+            (ROOT / "data" / "templates.json").read_text(encoding="utf-8")
+        )
+        for template in templates:
+            expected = f"{SITE_URL}template.html?id={template['id']}"
+            with self.subTest(template=template["id"]):
+                self.assertIn(expected, locations)
+
     def test_llms_txt_maps_pages_and_catalog(self):
         text = (SITE / "llms.txt").read_text(encoding="utf-8")
         for page in PAGE_SCRIPTS:
@@ -459,7 +503,7 @@ class SiteTests(unittest.TestCase):
             self.assertIn(f"{SITE_URL}data/{name}.json", text)
         self.assertIn(f"{SITE_URL}data/catalog.json", text)
         self.assertIn(f"{SITE_URL}schema.json", text)
-        self.assertIn("deterministic-lexical-v1", text)
+        self.assertIn("deterministic-lexical-v2", text)
 
     def test_no_legacy_entrypoint(self):
         self.assertFalse((SITE / "app.js").exists())

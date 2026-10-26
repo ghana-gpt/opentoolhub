@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import re
 import sys
 import unicodedata
@@ -19,17 +20,54 @@ from typing import Any
 from config import DATA_DIR
 
 STOPWORDS = frozenset(
-    "a an and app application build building create for from i in into my of on "
-    "or the to tool tools using want with".split()
+    "a an and any app application are around best build building can compare "
+    "compared comparison create do does find finder for from get good great "
+    "help how i in into is it like looking make me my near nearby need needs "
+    "new of on or please show shows simple some that the their them there this "
+    "to tool tools us use used using versus vs want we where which who why "
+    "will with you your".split()
+)
+
+# Field weights and scoring constants. They are mirrored by site/js/data.js so
+# the browser builder and the CLI rank the same catalog the same way.
+MAX_TOKEN_WEIGHT = 4
+MIN_COVERAGE = 0.5
+KEYWORD_SCORE_FLOOR = 50
+KEYWORD_SCORE_SPAN = 38
+MAX_KEYWORD_SCORE = 88
+FUZZY_WEIGHT = 0.8
+MIN_KEYWORD_SCORE = 55
+FUZZY_MIN_WEIGHT = 3
+
+# British and plural spellings are reduced to one form before comparison.
+STEM_RULES = (
+    ("isations", "ize"),
+    ("izations", "ize"),
+    ("isation", "ize"),
+    ("ization", "ize"),
+    ("ising", "ize"),
+    ("izing", "ize"),
+    ("ised", "ize"),
+    ("ized", "ize"),
+    ("ises", "ize"),
+    ("izes", "ize"),
+    ("ise", "ize"),
+    ("ize", "ize"),
 )
 
 
 class NoMatchError(LookupError):
     """Raised when no use case matches the query."""
 
-    def __init__(self, query: str, suggestions: list[str]) -> None:
+    def __init__(
+        self,
+        query: str,
+        suggestions: list[str],
+        closest: list[dict[str, Any]] | None = None,
+    ) -> None:
         self.query = query
         self.suggestions = suggestions
+        self.closest = closest or []
         available = ", ".join(suggestions)
         super().__init__(
             f"No use case matched {query!r}. Available use cases: {available}"
@@ -75,40 +113,173 @@ def normalize(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", " ", ascii_text.lower()).strip()
 
 
+def stem(token: str) -> str:
+    """Reduce a token to one form so plurals and -ise spellings still match."""
+    word = token
+    if len(word) <= 3:
+        return word
+    for suffix, replacement in STEM_RULES:
+        if word.endswith(suffix):
+            word = word[: -len(suffix)] + replacement
+            break
+    if word.endswith("ies") and len(word) > 4:
+        word = word[:-3] + "y"
+    elif word.endswith("sses"):
+        word = word[:-2]
+    elif word.endswith("s") and not word.endswith(("ss", "us", "is")) and len(word) > 3:
+        word = word[:-1]
+    if word.endswith("ing") and len(word) > 5:
+        word = word[:-3]
+        if len(word) > 2 and word[-1] == word[-2]:
+            word = word[:-1]
+    elif word.endswith("ed") and len(word) > 4:
+        word = word[:-2]
+    return word
+
+
 def tokenize(text: str) -> list[str]:
-    return [word for word in normalize(text).split() if word not in STOPWORDS]
+    """Return stopword-filtered, stemmed search tokens."""
+    return [stem(word) for word in normalize(text).split() if word not in STOPWORDS]
 
 
-def _search_document(use_case: dict, data: dict[str, Any]) -> str:
-    pieces = [
-        use_case["name"],
-        use_case["summary"],
-        use_case["goal"],
-        *use_case["aliases"],
-        *use_case["keywords"],
-        *use_case["personas"],
-    ]
+def _add_terms(weights: dict[str, int], text: str, weight: int) -> None:
+    """Record every token of text at the given field weight."""
+    for token in tokenize(text):
+        if weights.get(token, 0) < weight:
+            weights[token] = weight
+
+
+def _use_case_weights(use_case: dict, data: dict[str, Any]) -> dict[str, int]:
+    """Weight every searchable term by the field that contains it."""
+    weights: dict[str, int] = {}
+    _add_terms(weights, use_case["name"], 4)
+    for alias in use_case["aliases"]:
+        _add_terms(weights, alias, 4)
+    for keyword in use_case["keywords"]:
+        _add_terms(weights, keyword, 3)
+    _add_terms(weights, use_case["summary"], 2)
+    _add_terms(weights, use_case["goal"], 2)
+    for persona in use_case["personas"]:
+        _add_terms(weights, persona, 1)
     for category_id in use_case["categories"]:
         category = data["category_by_id"].get(category_id)
         if category:
-            pieces.extend([category["name"], *category["aliases"]])
+            _add_terms(weights, category["name"], 2)
+            for alias in category["aliases"]:
+                _add_terms(weights, alias, 2)
     for stack_id in use_case["stack_ids"]:
         stack = data["stack_by_id"].get(stack_id)
         if stack:
-            pieces.extend([stack["name"], *stack["best_for"]])
-            pieces.extend(tool["slot"] for tool in stack["tools"])
+            _add_terms(weights, stack["name"], 2)
+            for text in stack["best_for"]:
+                _add_terms(weights, text, 1)
+            for tool in stack["tools"]:
+                _add_terms(weights, tool["slot"], 1)
     for template_id in use_case["template_ids"]:
         template = data["template_by_id"].get(template_id)
         if template:
-            pieces.append(template["name"])
-    return " ".join(pieces)
+            _add_terms(weights, template["name"], 2)
+    return weights
+
+
+def _build_index(data: dict[str, Any]) -> dict[str, Any]:
+    """Index term weights per use case plus document frequency per term."""
+    weights = {
+        use_case["id"]: _use_case_weights(use_case, data)
+        for use_case in data["use_cases"]
+    }
+    document_frequency: dict[str, int] = {}
+    for terms in weights.values():
+        for term in terms:
+            document_frequency[term] = document_frequency.get(term, 0) + 1
+    return {
+        "weights": weights,
+        "df": document_frequency,
+        "count": max(len(weights), 1),
+    }
+
+
+def _idf(term: str, index: dict[str, Any]) -> float:
+    """Rarer terms carry more weight; unseen terms count as generic filler."""
+    frequency = index["df"].get(term, 0)
+    if not frequency:
+        return 1.0
+    return math.log(1 + index["count"] / frequency)
+
+
+def _within_one_edit(left: str, right: str) -> bool:
+    """True when the two strings differ by at most one edit or swap."""
+    if left == right:
+        return True
+    if abs(len(left) - len(right)) > 1:
+        return False
+    start = 0
+    limit = min(len(left), len(right))
+    while start < limit and left[start] == right[start]:
+        start += 1
+    end_left = len(left)
+    end_right = len(right)
+    while (
+        end_left > start
+        and end_right > start
+        and left[end_left - 1] == right[end_right - 1]
+    ):
+        end_left -= 1
+        end_right -= 1
+    remainder_left = left[start:end_left]
+    remainder_right = right[start:end_right]
+    if len(remainder_left) <= 1 and len(remainder_right) <= 1:
+        return True
+    return (
+        len(remainder_left) == 2
+        and len(remainder_right) == 2
+        and remainder_left == remainder_right[::-1]
+    )
+
+
+def _fuzzy_term(term: str, vocabulary: Any) -> str | None:
+    """Return the single vocabulary term one edit away, if exactly one exists."""
+    if len(term) < 5:
+        return None
+    matches = [
+        candidate for candidate in vocabulary if _within_one_edit(term, candidate)
+    ]
+    return matches[0] if len(matches) == 1 else None
+
+
+def _evidence(
+    use_case_id: str, query_tokens: list[str], index: dict[str, Any]
+) -> tuple[float, list[str], bool]:
+    """Return (coverage, matched terms, whether every match was fuzzy)."""
+    weights = index["weights"][use_case_id]
+    total = 0.0
+    matched_weight = 0.0
+    matched: list[str] = []
+    exact_matches = 0
+    for token in query_tokens:
+        token_idf = _idf(token, index)
+        total += token_idf * MAX_TOKEN_WEIGHT
+        if token in weights:
+            exact_matches += 1
+            matched.append(token)
+            matched_weight += token_idf * weights[token]
+            continue
+        candidate = _fuzzy_term(
+            token,
+            (term for term, weight in weights.items() if weight >= FUZZY_MIN_WEIGHT),
+        )
+        if candidate is not None:
+            matched.append(candidate)
+            matched_weight += token_idf * weights[candidate] * FUZZY_WEIGHT
+    coverage = matched_weight / total if total else 0.0
+    return coverage, matched, bool(matched) and exact_matches == 0
 
 
 def _score(
     use_case: dict,
     query: str,
     query_tokens: list[str],
-    data: dict[str, Any],
+    index: dict[str, Any],
 ) -> tuple[int, str]:
     normalized_query = normalize(query)
     if normalized_query == normalize(use_case["id"]):
@@ -120,28 +291,37 @@ def _score(
     if not query_tokens:
         return 0, "none"
 
-    document_tokens = set(tokenize(_search_document(use_case, data)))
-    matched = [token for token in query_tokens if token in document_tokens]
-    if not matched:
+    coverage, matched, fuzzy_only = _evidence(use_case["id"], query_tokens, index)
+    # One hit inside a multi-word phrase is weak evidence, unless the term is a
+    # rare keyword or name match that almost no other use case shares.
+    if len(matched) < 2 and len(query_tokens) > 1:
+        weights = index["weights"][use_case["id"]]
+        distinctive = any(
+            weights[term] >= 3 and index["df"].get(term, 0) <= 2 for term in matched
+        )
+        if not distinctive:
+            return 0, "none"
+    elif coverage < MIN_COVERAGE:
         return 0, "none"
-    if len(matched) == len(query_tokens):
-        name_tokens = set(tokenize(use_case["name"]))
-        bonus = 5 if set(query_tokens) <= name_tokens else 0
-        return min(89, 80 + bonus), "keywords"
-
-    ratio = len(matched) / len(query_tokens)
-    if ratio < 0.5:
+    rarity = max(1 - index["df"].get(term, 0) / index["count"] for term in matched)
+    strength = coverage * (0.6 + 0.4 * rarity)
+    score = min(
+        MAX_KEYWORD_SCORE,
+        KEYWORD_SCORE_FLOOR + int(round(KEYWORD_SCORE_SPAN * strength)),
+    )
+    if score < MIN_KEYWORD_SCORE:
         return 0, "none"
-    return 40 + int(ratio * 40), "keywords"
+    return score, "fuzzy" if fuzzy_only else "keywords"
 
 
 def rank(query: str, data: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     """Return matching use cases ordered by score, then name."""
     data = data or load_data()
     query_tokens = tokenize(query)
+    index = _build_index(data)
     ranked: list[dict[str, Any]] = []
     for use_case in data["use_cases"]:
-        score, matched_by = _score(use_case, query, query_tokens, data)
+        score, matched_by = _score(use_case, query, query_tokens, index)
         if score:
             ranked.append(
                 {
@@ -154,12 +334,50 @@ def rank(query: str, data: dict[str, Any] | None = None) -> list[dict[str, Any]]
     return ranked
 
 
+def suggest(
+    query: str, data: dict[str, Any] | None = None, limit: int = 3
+) -> list[dict[str, Any]]:
+    """Return the closest partial matches, even when none clears the threshold."""
+    data = data or load_data()
+    query_tokens = tokenize(query)
+    if not query_tokens:
+        return []
+    index = _build_index(data)
+    closest: list[dict[str, Any]] = []
+    for use_case in data["use_cases"]:
+        coverage, matched, _fuzzy_only = _evidence(
+            use_case["id"], query_tokens, index
+        )
+        if not matched:
+            continue
+        closest.append(
+            {
+                "id": use_case["id"],
+                "name": use_case["name"],
+                "matched": list(dict.fromkeys(matched)),
+                "coverage": coverage,
+            }
+        )
+    closest.sort(
+        key=lambda item: (
+            -len(item["matched"]),
+            -item["coverage"],
+            item["name"].lower(),
+        )
+    )
+    return closest[:limit]
+
+
 def resolve(query: str, data: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     """Return ranked matches or raise NoMatchError with usable suggestions."""
     data = data or load_data()
     ranked = rank(query, data)
     if not ranked:
-        raise NoMatchError(query, [item["id"] for item in data["use_cases"]])
+        raise NoMatchError(
+            query,
+            [item["id"] for item in data["use_cases"]],
+            suggest(query, data),
+        )
     return ranked
 
 
@@ -355,6 +573,14 @@ def main(argv: list[str] | None = None) -> int:
         result = build_recommendation(query, data)
     except NoMatchError as exc:
         print(f"error: {exc}", file=sys.stderr)
+        if exc.closest:
+            print("Closest matches:", file=sys.stderr)
+            for item in exc.closest:
+                terms = ", ".join(item["matched"])
+                print(
+                    f"  - {item['name']} ({item['id']}) matched: {terms}",
+                    file=sys.stderr,
+                )
         return 2
 
     if args.json:

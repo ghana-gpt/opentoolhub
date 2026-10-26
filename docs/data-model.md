@@ -51,7 +51,7 @@ The manifest uses one stable shape:
     }
   },
   "relationships": [],
-  "recommendation": { "engine": "deterministic-lexical-v1" },
+  "recommendation": { "engine": "deterministic-lexical-v2" },
   "entities": { "use-cases": [] }
 }
 ```
@@ -65,16 +65,29 @@ because JSON Schema cannot express those repository-wide invariants.
 
 The `recommendation` object is the shared browser/CLI contract:
 
-- `engine` is `deterministic-lexical-v1`; there is no model call.
+- `engine` is `deterministic-lexical-v2`; there is no model call.
 - `fields` lists every value used for matching: use case id/name/summary/goal/
   aliases/keywords/personas, category names and aliases, stack names/`best_for`/
   tool slots, and template names. `exact_match_fields` names the three fields
   with dedicated exact-match scores; `id` is exact-only and is not added to the
-  tokenized document.
+  tokenized document. `field_weights` records the weight each field contributes
+  (name and aliases 4, keywords 3, summary/goal/categories/stacks/templates 2,
+  personas and tool slots 1).
 - `normalization` is Unicode NFKD, ASCII, lowercase, then non-alphanumeric runs
-  to spaces. `stopwords` is the exact list.
-- `scoring` records exact id/name/alias scores, the all-token score with its
-  name bonus, and the partial-token formula and threshold.
+  to spaces. `stopwords` is the exact list. `stemming` reduces British spellings
+  to `-ize`, plurals to their singular, and drops trailing `ing`/`ed` so
+  "visualisations", "visualization", and "visualise" all collapse together.
+- `scoring` records exact id/name/alias scores and the keyword formula:
+  `50 + round(38 * coverage * (0.6 + 0.4 * rarity))`, capped at 88 and dropped
+  below 55. `coverage` is the idf-weighted share of the query that the use case
+  covers; `gate` requires half the query to match unless a single distinctive
+  term (weight 3 or more, shared by at most two use cases) carries the query.
+  `fuzzy` accepts one edit or adjacent transposition for tokens of five or more
+  characters and scores those matches at 0.8 of their field weight.
+- `fallback` documents both non-answer paths. `NoMatchError` carries every use
+  case id plus the closest partial matches, so the CLI prints them and the
+  browser lists them under "Closest use cases". `needs_disambiguation` marks the
+  case where the best score is below 90 and a runner-up is within 5 points.
 - `tie_break` is score descending, then lowercase name ascending.
 
 `site/js/home.js` and `scripts/recommend.py` implement this contract. The browser

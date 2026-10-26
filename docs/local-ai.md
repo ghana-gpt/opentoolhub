@@ -204,6 +204,7 @@ python3 scripts/ai_chat.py "Summarise this idea"     # one prompt
 echo "read from stdin" | python3 scripts/ai_chat.py -
 python3 scripts/ai_chat.py --system "Be terse." "hi"  # per-request system prompt
 python3 scripts/ai_chat.py --provider local --no-fallback "hi"
+python3 scripts/ai_chat.py --check                   # one real round-trip, exit 0 or non-zero
 ```
 
 | Exit code | Meaning |
@@ -215,6 +216,49 @@ python3 scripts/ai_chat.py --provider local --no-fallback "hi"
 
 Exit code `3` is not an error to fix: the static site works without the AI
 layer, and the message points at this page.
+
+### `--check`: prove the round-trip, do not trust the readiness flag
+
+`--list` only reports what the configuration *looks like*: a key is present, a
+model name is set, the base URL parses. It never proves the provider answers.
+`--check` closes that gap. It sends one tiny prompt (``Reply with the single
+word: ready``) through the same provider layer the CLI and the proxy use, then
+prints what came back:
+
+```console
+$ python3 scripts/ai_chat.py --check
+OK: local / qwen2:0.5b answered in 5117 ms
+Reply: Ready.
+$ make ai-check          # the same thing, for people who live in make
+```
+
+`--check --json` adds the machine-readable envelope:
+
+```json
+{
+  "ok": true,
+  "provider": "local",
+  "model": "qwen2:0.5b",
+  "latency_ms": 5117,
+  "reply": "Ready.",
+  "fallback_used": false,
+  "attempts": [{ "provider_id": "local", "status": "ok", "latency_ms": 5117 }]
+}
+```
+
+Run it after configuring a provider, after pulling a new model, and whenever the
+AI page misbehaves. The exit code tells a script what happened:
+
+| Exit | Meaning |
+| --- | --- |
+| `0` | A provider answered |
+| `3` | Nothing is configured, or nothing is ready — the same "AI is optional" state as `--list` |
+| `4` | Providers ran and every one failed; each attempt and its reason is printed |
+
+A `500` from Ollama that says the model "requires more system memory" is a real
+answer from this command, and a useful one: the configuration is fine and the
+machine, not the code, needs attention. Try a smaller model
+(`qwen2:0.5b` needs about 0.4 GiB) rather than editing the provider code.
 
 ## `ai_proxy.py`
 
@@ -309,6 +353,7 @@ export OPEN_TOOL_HUB_AI_PROVIDERS=local
 export OPEN_TOOL_HUB_AI_LOCAL_KIND=ollama
 export OPEN_TOOL_HUB_AI_LOCAL_MODEL=phi3:mini
 python3 scripts/ai_chat.py --list
+python3 scripts/ai_chat.py --check            # one real round-trip, exit 0 on success
 python3 scripts/ai_chat.py --json "Say hello in five words."
 
 python3 scripts/ai_proxy.py &

@@ -23,8 +23,9 @@ repository.
 - Treats AI as optional and local: a terminal command and a loopback-only panel
   can ask your own Ollama or hosted provider about the catalog, with no key in
   the repository and no backend on the published site.
-- Refuses to guess silently: unknown queries exit with a useful message and a
-  list of valid use cases.
+- Refuses to guess silently: unknown queries exit with code `2`, name every
+  valid use case, and list the closest partial matches. Typos of five or more
+  characters still resolve through one-edit fuzzy matching.
 
 ## Quick start
 
@@ -121,6 +122,7 @@ variables, the JSON config format, the route contract, and troubleshooting.
 | `use-case.html?id=…` | One path with stacks, API links, templates, and its example |
 | `stacks.html` | Tool combinations with difficulty and per-slot APIs |
 | `templates.html` | Starter and variant templates, linked to repository files |
+| `template.html?id=…` | One template with build order, APIs, a worked example, related templates, and a copyable brief |
 | `apis.html` | API catalog with category, pricing, auth, and freshness details |
 | `ai.html` | Optional local AI panel; shows setup steps unless `scripts/ai_proxy.py` is running |
 

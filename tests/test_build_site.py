@@ -75,7 +75,7 @@ class BuildSiteTests(unittest.TestCase):
         )
 
         self.assertEqual(manifest["schema_version"], build_site.SCHEMA_VERSION)
-        self.assertEqual(manifest["recommendation"]["engine"], "deterministic-lexical-v1")
+        self.assertEqual(manifest["recommendation"]["engine"], "deterministic-lexical-v2")
         self.assertEqual(set(manifest["files"]), set(build_site.CATALOG_FILES))
         self.assertEqual(set(manifest["entities"]), set(build_site.CATALOG_FILES))
         for name, entry in manifest["files"].items():

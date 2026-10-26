@@ -2,13 +2,12 @@
 
 import {
   loadData,
-  useCaseSearchText,
+  buildSearchIndex,
+  scoreUseCases,
+  suggestUseCases,
   stacksForUseCase,
   templatesForUseCase,
   examplesForUseCase,
-  searchTokens,
-  tokenize,
-  normalize,
 } from "./data.js";
 import {
   qs,
@@ -28,75 +27,6 @@ import {
 import { renderUseCaseCard, renderToolList } from "./render.js";
 
 const LEVELS = new Set(["low", "medium", "high"]);
-
-// Keep the search document and scores in sync with scripts/recommend.py and the
-// recommendation contract in the generated catalog manifest.
-function scoreOneUseCase(useCase, normalizedIdea, tokens, data) {
-  if (normalizedIdea === normalize(useCase.id)) {
-    return { score: 100, matchedBy: "id" };
-  }
-  if (normalizedIdea === normalize(useCase.name)) {
-    return { score: 95, matchedBy: "name" };
-  }
-  if (
-    useCase.aliases.some((alias) => normalizedIdea === normalize(alias))
-  ) {
-    return { score: 90, matchedBy: "alias" };
-  }
-  if (!tokens.length) {
-    return { score: 0, matchedBy: "none" };
-  }
-
-  const documentTokens = new Set(
-    tokenize(useCaseSearchText(useCase, data))
-  );
-  const matched = tokens.filter((token) => documentTokens.has(token));
-  if (!matched.length) {
-    return { score: 0, matchedBy: "none" };
-  }
-  if (matched.length === tokens.length) {
-    const nameTokens = new Set(tokenize(useCase.name));
-    const bonus = tokens.every((token) => nameTokens.has(token)) ? 5 : 0;
-    return { score: Math.min(89, 80 + bonus), matchedBy: "keywords" };
-  }
-  const ratio = matched.length / tokens.length;
-  if (ratio < 0.5) {
-    return { score: 0, matchedBy: "none" };
-  }
-  return { score: 40 + Math.floor(ratio * 40), matchedBy: "keywords" };
-}
-
-function scoreUseCases(idea, categoryIds, data) {
-  const hasIdea = String(idea).trim().length > 0;
-  const normalizedIdea = normalize(idea);
-  const tokens = searchTokens(idea);
-  const results = [];
-  for (const useCase of data.useCases) {
-    const overlap = categoryIds.filter((id) => useCase.categories.includes(id));
-    if (categoryIds.length && !overlap.length) {
-      continue;
-    }
-    const { score, matchedBy } = scoreOneUseCase(
-      useCase,
-      normalizedIdea,
-      tokens,
-      data
-    );
-    if (hasIdea && !score) {
-      continue;
-    }
-    results.push({ useCase, score, matchedBy });
-  }
-  results.sort((left, right) => {
-    const leftName = left.useCase.name.toLowerCase();
-    const rightName = right.useCase.name.toLowerCase();
-    return (
-      right.score - left.score ||
-      (leftName < rightName ? -1 : leftName > rightName ? 1 : 0)
-    );
-  });
-  return results;
-}
 
 function fitNote(difficulty, level) {
   if (difficulty === level) {
@@ -279,7 +209,7 @@ function renderPath(useCase, level, data) {
     </article>`;
 }
 
-function renderResults(matches, level, data) {
+function renderResults(matches, level, data, closest = []) {
   const section = qs("#results-section");
   const title = qs("#results-title");
   const results = qs("#results");
@@ -287,11 +217,20 @@ function renderResults(matches, level, data) {
 
   if (!matches.length) {
     title.textContent = "No matching path yet";
+    const closestMarkup = closest.length
+      ? `<div class="alt-matches">
+          <h3>Closest use cases</h3>
+          <p class="muted">Nothing matched every word, so start from the nearest documented path:</p>
+          <div class="grid three">${closest
+            .map(({ useCase }) => renderUseCaseCard(useCase, data))
+            .join("")}</div>
+        </div>`
+      : "";
     showEmpty(
       results,
       "Nothing matched those filters",
       "Try a broader idea, remove an area, or clear the filters and start again.",
-      `<p class="cta-row">
+      `${closestMarkup}<p class="cta-row">
         <button type="button" class="button secondary" data-action="clear">Clear filters</button>
         <a class="text-link" href="use-cases.html">Browse all use cases</a>
       </p>`
@@ -353,6 +292,7 @@ async function init() {
     .join("");
 
   const params = readParams(["q", "areas", "level"]);
+  const searchIndex = buildSearchIndex(data);
   const selected = params.areas
     .split(",")
     .filter((id) => data.categoryById.has(id));
@@ -385,7 +325,12 @@ async function init() {
     }
 
     updateParams({ q: idea, areas: categories.join(","), level: levelValue });
-    renderResults(scoreUseCases(idea, categories, data), levelValue, data);
+    renderResults(
+      scoreUseCases(idea, categories, data, searchIndex),
+      levelValue,
+      data,
+      suggestUseCases(idea, data, searchIndex)
+    );
   });
 
   form.addEventListener("reset", () => {
@@ -412,7 +357,12 @@ async function init() {
   });
 
   if (params.q || selected.length) {
-    renderResults(scoreUseCases(params.q, selected, data), level, data);
+    renderResults(
+      scoreUseCases(params.q, selected, data, searchIndex),
+      level,
+      data,
+      suggestUseCases(params.q, data, searchIndex)
+    );
   }
 }
 

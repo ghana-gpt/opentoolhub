@@ -5,6 +5,7 @@ This is the AI equivalent of ``scripts/recommend.py``: a thin, scriptable
 command that proves the provider layer works without a browser.
 
     python3 scripts/ai_chat.py --list
+    python3 scripts/ai_chat.py --check
     python3 scripts/ai_chat.py "Name three public weather APIs"
     python3 scripts/ai_chat.py --provider local --json "Summarise this idea"
 
@@ -39,6 +40,8 @@ EXIT_USAGE = 2
 EXIT_NOT_CONFIGURED = 3
 EXIT_ALL_FAILED = 4
 
+CHECK_PROMPT = "Reply with the single word: ready"
+
 
 def format_status(chain: AIChain) -> str:
     described = chain.describe()
@@ -49,6 +52,51 @@ def format_status(chain: AIChain) -> str:
     if not described["configured"]:
         lines.append("Setup: " + DOCS_PATH)
     return "\n".join(lines)
+
+
+def run_check(chain: AIChain, args: argparse.Namespace) -> int:
+    """Prove the configured provider answers one real request end to end."""
+    try:
+        result = chain.complete(
+            [Message("user", CHECK_PROMPT)],
+            provider_id=args.provider.strip(),
+            fallback=not args.no_fallback,
+        )
+    except (UnknownProvider, ProviderNotReady) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return EXIT_USAGE
+    except AllProvidersFailed as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        for attempt in exc.attempts:
+            print(f"  {attempt.as_dict()}", file=sys.stderr)
+        return EXIT_ALL_FAILED
+
+    completion = result.completion
+    reply = (completion.text or "").strip().replace("\n", " ")[:120]
+    if args.json:
+        print(
+            json.dumps(
+                {
+                    "ok": True,
+                    "provider": completion.provider_id,
+                    "model": completion.model,
+                    "latency_ms": completion.latency_ms,
+                    "reply": reply,
+                    "fallback_used": len(result.attempts) > 1,
+                    "attempts": [attempt.as_dict() for attempt in result.attempts],
+                },
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
+    else:
+        print(
+            f"OK: {completion.provider_id} / {completion.model} answered in "
+            f"{completion.latency_ms} ms"
+        )
+        if reply:
+            print(f"Reply: {reply}")
+    return EXIT_OK
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -68,6 +116,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--json", action="store_true", help="Print machine-readable JSON."
+    )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Send one tiny prompt and report whether a provider really answers.",
     )
     parser.add_argument(
         "--provider",
@@ -112,6 +165,9 @@ def main(argv: list[str] | None = None) -> int:
         for line in provider_lines(chain.describe()):
             print(line, file=sys.stderr)
         return EXIT_NOT_CONFIGURED
+
+    if args.check:
+        return run_check(chain, args)
 
     prompt = " ".join(args.prompt).strip()
     if prompt == "-" or (not prompt and not sys.stdin.isatty()):

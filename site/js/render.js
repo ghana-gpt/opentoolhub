@@ -189,11 +189,15 @@ export function renderTemplateCard(template, data) {
       <p class="muted small">Built for: ${useCases
         .map((useCase) => useCaseLink(useCase, useCase.name, "meta-link"))
         .join(", ") || "unassigned"}</p>
-      <p class="card-action">${repoLink(
+      <p class="card-action"><a class="text-link" href="template.html?id=${encodeURIComponent(
+        template.id
+      )}" aria-label="Open the ${escapeHtml(
+        template.name
+      )} build brief">Open the build brief →</a> · ${repoLink(
         template.path,
-        "Open the starter →",
+        "README",
         "text-link",
-        `Open the ${template.name} starter`
+        `Read the ${template.name} README in the repository`
       )}</p>
     </article>`;
 }

@@ -1125,6 +1125,14 @@ select.select {
   border-top: 1px solid var(--border);
 }
 
+/* The brief is long JSON; keep it scrollable so it cannot swallow the page. */
+.brief-code {
+  max-height: 26rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  tab-size: 2;
+}
+
 .button:disabled {
   opacity: 0.45;
   cursor: not-allowed;

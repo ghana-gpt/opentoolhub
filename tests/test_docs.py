@@ -67,7 +67,7 @@ class DocumentationTests(unittest.TestCase):
             "catalog.json",
             "schema.json",
             "JSON Schema draft 2020-12",
-            "deterministic-lexical-v1",
+            "deterministic-lexical-v2",
             "CollectionPage",
             "TechArticle",
         ):
