@@ -13,7 +13,7 @@ you run it, and your key never leaves your machine.
 
 | It is | It is not |
 | --- | --- |
-| Three stdlib-only modules in `scripts/` | A dependency of the static site |
+| Four stdlib-only modules in `scripts/` | A dependency of the static site |
 | A way to ask an Ollama, OpenAI, Anthropic, DeepSeek, Qwen, or OpenAI-compatible model about the catalog | A hosted service, a crawler, or a training pipeline |
 | Loopback by default, with origin and body guards | Reachable from your network unless you pass `--allow-remote` |
 | Key-from-environment only | A place where a key is ever written to a file, a log, or a response |
@@ -52,6 +52,13 @@ export OPEN_TOOL_HUB_AI_LOCAL_MODEL=phi3:mini
 # 3. Check readiness. No network call, no model load.
 python3 scripts/ai_chat.py --list
 ```
+
+Pick a model your machine can actually load. A 3.8B model such as `phi3:mini`
+wants roughly 4 GiB at run time; on a laptop with less free memory use a smaller
+one such as `qwen2:0.5b` (about 400 MB) and set `..._MODEL` to match. `ollama
+list` shows what is pulled and `ollama ps` shows what is loaded. If a model is
+too large, Ollama answers `HTTP 500` with its own reason and the layer reports
+that verbatim instead of pretending to be ready — see Troubleshooting.
 
 ```text
 Configured providers (fallback order):
@@ -141,7 +148,9 @@ For the provider id `local`, the prefix is `OPEN_TOOL_HUB_AI_LOCAL_` (uppercase,
 | `LABEL` | Display name in the panel and tables | the provider id |
 
 Numbers and booleans are parsed, not guessed: `TIMEOUT=soon` fails with a
-message that names the variable.
+message that names the variable, and `TIMEOUT=0` fails because a zero-second
+timeout cannot answer. The same rules apply to the JSON file, where the message
+names the file and the provider instead.
 
 ### The JSON file
 
@@ -166,6 +175,23 @@ A bare list is accepted too. Each entry needs `id`; `kind`, `model`, `base_url`,
 Environment variables override file values field by field, so a committed or
 shared file can hold the shape while `.env` holds the machine-specific parts.
 
+A file is checked as strictly as the environment is, because a typo in a
+git-ignored file should not look like a working setup:
+
+| Rule | Why |
+| --- | --- |
+| Two entries may not share an `id` | The last one would win silently, and the first would be gone |
+| `timeout` must be a number over `0`, `max_tokens` a whole number of at least `1` | A zero timeout cannot answer, and a fractional token cap is a typo |
+| `base_url` must be an `http://` or `https://` URL | Anything else fails inside `urllib` with a less useful message |
+| `base_url` may not embed `user:password@` | That value is printed by `--list`, `/api/ai/status`, and `--json`, so a credential there would reach a browser |
+| The file must be UTF-8 JSON | A binary or mis-encoded file is reported, not guessed at |
+
+A file that breaks one of these, or is missing, unreadable, or not JSON, is a
+configuration error: the CLI exits `2` and the proxy answers `503` while it keeps
+serving the site. Nothing is silently ignored. Each message names where the value
+lives — the environment variable when it came from there, `provider 'x' in
+/path/to/file` when it came from a file — so a typo is found without a traceback.
+
 ### Keys never live in files
 
 A config file may only name the variable that holds a key:
@@ -189,7 +215,13 @@ A chain tries providers in order and stops at the first answer:
 - if every provider fails, the command exits with a summary of each attempt;
 - `--provider id` moves that provider to the front and fails loudly when the id
   is unknown or not ready;
-- `--no-fallback` uses only `--provider` and never continues down the chain.
+- `--no-fallback` uses only `--provider` and never continues down the chain. It
+  needs `--provider`, so the two together are checked before anything runs: the
+  command exits `2` with a sentence instead of trying to call no provider at all.
+
+`--check --json` reports `fallback_used` as `true` only when more than one
+provider was actually called. A provider that was configured but not ready is
+recorded as `skipped`, which is not a fallback.
 
 Local first is usually the right order: it costs nothing and keeps prompts on
 your machine. A hosted provider second means an offline Ollama, or a model that
@@ -287,6 +319,7 @@ with a short `error` and a human `detail`:
 | `413` | Body over 64 KiB |
 | `415` | `Content-Type` is not `application/json` |
 | `502` | Every provider was tried and failed; the attempts carry the reasons |
+| `503` | The local provider configuration itself is broken: unknown kind, unparsable number, missing config file, or a key stored in a file. The `detail` names the setting, `docs` links here |
 
 Safety defaults are on purpose:
 
@@ -297,6 +330,8 @@ Safety defaults are on purpose:
   reach a provider;
 - `Origin` must be the proxy's own origin (or, with `--allow-remote`, the host
   the request was addressed to), and `Origin: null` is rejected;
+- a client that stalls in the middle of a request is dropped after 30 seconds,
+  so a half-sent body cannot hold a worker thread open;
 - request bodies are never logged — only method, path, and status — and keys
   never appear in a response.
 
@@ -324,27 +359,70 @@ browser for a model. Nothing else on the site depends on it.
 | `no AI providers are configured` (exit `3`) | Set `OPEN_TOOL_HUB_AI_PROVIDERS` and the per-provider variables, or create `ai-providers.local.json` |
 | `missing API key in $OPENAI_API_KEY` | Export the variable, or add it to `.env`; `--list` shows which name is expected |
 | `Connection refused` on `127.0.0.1:11434` | `ollama serve` is not running |
+| `could not reach http://...` (exit `4`, proxy `502`) | The provider is down, on another port, or the timeout expired before it answered. Check `BASE_URL` and raise `TIMEOUT`; the attempt trail in `--json` output names the URL |
 | `HTTP 404 ... model not found` | The model name does not match `ollama list`; pull it or fix `MODEL` |
 | `model requires more system memory ... than is available` | The model is larger than free RAM; choose a smaller model or close other applications |
 | `HTTP 401` | The key is wrong or expired; the message is redacted, so check the variable itself |
 | `origin not allowed` (`403`) | Open `ai.html` from the proxy's own address, not from a file or another port |
+| `--check` exits `2` with a `KIND`/`kind` message (proxy `503`) | A provider kind is misspelled or missing; the message lists the known kinds |
 | `could not serve ... : Address already in use` | Another process owns the port; pass `--port 8790` |
 | `... must be a number, got 'soon'` | A `TIMEOUT`/`MAX_TOKENS` value is not numeric; the message names the variable |
+| `... must be greater than 0 seconds` | A timeout of `0` or a negative value cannot answer; use a positive number of seconds |
+| `... defines provider 'x' more than once` | Two file entries share an id; keep one, or rename them and order them with `OPEN_TOOL_HUB_AI_PROVIDERS` |
+| `... is not valid UTF-8 text` / `could not read ...` | The config file is binary, unreadable, or a directory; the path in the message is the one that was read |
+| `... base_url must be an http:// or https:// URL` | Add the scheme, e.g. `http://127.0.0.1:1234/v1` |
+| `... base_url must not embed a credential` | Remove `user:key@` from the URL and name an environment variable with `api_key_env` instead |
 
 ## Checking it works
 
 The layer is covered by `tests/test_ai.py`, which needs no network, no key, and
 no running model: adapter requests go through an injected transport, and the
-proxy tests start a throwaway loopback server with a stubbed chain. They cover
-the registry, readiness, each adapter's request and response shape, redaction,
-fallback, configuration precedence, the security guards, and the CLI exit codes.
-A small hygiene group also pins the page/module pair, the inert example config,
-the stdlib-only import surface of the four AI scripts, and that no script
-carries a literal key.
+proxy tests start a throwaway loopback server with a stubbed chain. `TransportTests`
+goes one level deeper and drives the real stdlib client over a real loopback
+socket, so timeouts, HTTP error mapping, non-JSON replies, an unreachable port,
+and key redaction are proven rather than assumed. Together they cover the
+registry, readiness, each adapter's request and response shape, fallback,
+configuration precedence, malformed config files (a bad number, duplicate ids, a
+non-UTF-8 file, a credential in `base_url`), the security guards, and the CLI
+exit codes. A small hygiene group also pins the page/module pair, the inert
+example config, the stdlib-only import surface of the four AI scripts, and that
+no script carries a literal key.
 
 ```bash
 python3 -m unittest tests.test_ai -v
 ```
+
+### Validating a real provider
+
+`tests/test_ai_live.py` is the opt-in suite that asks the provider you configured
+a real question, through the same code the CLI and the proxy use, and then
+checks that a dead or timed-out provider fails cleanly. It is skipped unless
+`OPEN_TOOL_HUB_AI_LIVE=1` is set, so a fresh clone, `make test`, and GitHub
+Actions never need a model:
+
+```bash
+make ai-live
+# or
+OPEN_TOOL_HUB_AI_LIVE=1 python3 -m unittest tests.test_ai_live -v
+```
+
+```text
+test_a_dead_provider_returns_json_502_from_the_proxy ... ok
+test_a_missing_model_is_reported_before_any_request ... ok
+test_a_real_prompt_returns_text_from_the_model ... ok
+test_a_timeout_against_a_real_provider_is_reported_not_hung ... ok
+test_an_unreachable_provider_fails_with_a_readable_reason ... ok
+test_the_cli_check_round_trip_is_machine_readable ... ok
+test_the_configured_provider_reports_itself_ready ... ok
+test_the_prompt_is_never_echoed_into_the_access_log ... ok
+test_the_proxy_status_and_chat_use_the_real_provider ... ok
+test_the_proxy_still_refuses_a_foreign_origin ... ok
+test_the_static_page_is_unaffected_by_the_provider ... ok
+```
+
+A skipped run means no model was asked, not that everything works: configure a
+provider first. The suite uses whatever is ready and needs no hosted key, so a
+local Ollama server is enough.
 
 For a manual, real-provider check, with Ollama running:
 
@@ -379,7 +457,3 @@ the behaviour the tests pin down.
 - The catalog is curated by people. A model can repeat it, summarise it, or get
   it wrong; use `data/catalog.json` and the API's official documentation as the
   source of truth.
-
-
-
-

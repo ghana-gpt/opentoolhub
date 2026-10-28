@@ -34,6 +34,7 @@ __all__ = [
     "Attempt",
     "ChainResult",
     "Completion",
+    "ConfigError",
     "DEFAULT_API_KEY_ENV",
     "DEFAULT_BASE_URLS",
     "DeepSeekProvider",
@@ -92,6 +93,16 @@ MAX_ERROR_CHARS = 400
 
 class AIError(RuntimeError):
     """Base class for problems the AI layer reports to a human."""
+
+
+class ConfigError(AIError):
+    """The provider setup itself is wrong: a missing file, an unknown kind, a
+    stored key, a value that is not a number.
+
+    It is separate from a failed call on purpose. A caller can fix a request,
+    but only an operator can fix a configuration, so the two need different
+    answers: the proxy reports this one as ``503``, never ``400``.
+    """
 
 
 class ProviderError(AIError):
@@ -239,6 +250,16 @@ class ChainResult:
 
     completion: Completion
     attempts: list[Attempt] = field(default_factory=list)
+
+    @property
+    def fallback_used(self) -> bool:
+        """True when more than one provider was actually called.
+
+        A ``skipped`` attempt is not a fallback: the provider was never asked.
+        Counting attempts alone would report a fallback for a chain where one
+        provider answered and the rest were simply not ready.
+        """
+        return sum(1 for attempt in self.attempts if attempt.status != "skipped") > 1
 
     def as_dict(self) -> dict[str, Any]:
         return {

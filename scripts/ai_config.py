@@ -35,12 +35,13 @@ import json
 import os
 from pathlib import Path
 from typing import Any, Mapping
+from urllib.parse import urlsplit
 
 import config
 
 from ai_providers import (
     AIChain,
-    AIError,
+    ConfigError,
     DEFAULT_API_KEY_ENV,
     DEFAULT_BASE_URLS,
     PROVIDER_CLASSES,
@@ -67,18 +68,29 @@ def _env(env: Mapping[str, str], name: str) -> str:
     return (env.get(name) or "").strip()
 
 
-def _float(value: str, source: str) -> float:
+def _float(value: Any, source: str) -> float:
+    """Coerce a number that came from an environment variable or a JSON file.
+
+    A ``bool`` is rejected on purpose: Python would happily turn JSON ``true``
+    into ``1.0`` and a one-second timeout is never what the author meant.
+    """
+    if isinstance(value, bool) or value is None:
+        raise ConfigError(f"{source} must be a number, got {value!r}")
     try:
         return float(value)
-    except ValueError:
-        raise AIError(f"{source} must be a number, got {value!r}") from None
+    except (TypeError, ValueError):
+        raise ConfigError(f"{source} must be a number, got {value!r}") from None
 
 
-def _int(value: str, source: str) -> int:
+def _int(value: Any, source: str) -> int:
+    if isinstance(value, bool) or value is None:
+        raise ConfigError(f"{source} must be an integer, got {value!r}")
+    if isinstance(value, float) and not value.is_integer():
+        raise ConfigError(f"{source} must be an integer, got {value!r}")
     try:
         return int(value)
-    except ValueError:
-        raise AIError(f"{source} must be an integer, got {value!r}") from None
+    except (TypeError, ValueError):
+        raise ConfigError(f"{source} must be an integer, got {value!r}") from None
 
 
 def _bool(value: str, source: str) -> bool:
@@ -87,7 +99,7 @@ def _bool(value: str, source: str) -> bool:
         return True
     if normalized in {"0", "false", "no", "off"}:
         return False
-    raise AIError(f"{source} must be true/false, got {value!r}")
+    raise ConfigError(f"{source} must be true/false, got {value!r}")
 
 
 def config_path(env: Mapping[str, str] | None = None) -> Path | None:
@@ -103,7 +115,7 @@ def config_path(env: Mapping[str, str] | None = None) -> Path | None:
         if not path.is_absolute():
             path = (config.ROOT / path).resolve()
         if not path.is_file():
-            raise AIError(f"{ENV_PREFIX}CONFIG points at a missing file: {path}")
+            raise ConfigError(f"{ENV_PREFIX}CONFIG points at a missing file: {path}")
         return path
     default = config.ROOT / DEFAULT_CONFIG_NAME
     return default if default.is_file() else None
@@ -112,7 +124,7 @@ def config_path(env: Mapping[str, str] | None = None) -> Path | None:
 def _reject_secret_fields(entry: Mapping[str, Any], path: Path) -> None:
     for field_name in entry:
         if str(field_name).strip().lower() in SECRET_FIELDS:
-            raise AIError(
+            raise ConfigError(
                 f"{path} sets {field_name!r} for provider "
                 f"{entry.get('id')!r}. Do not store keys in files. Put the key "
                 "in an environment variable and name that variable with "
@@ -127,22 +139,38 @@ def load_config_entries(
     if path is None:
         return []
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        text = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        raise ConfigError(f"{path} does not exist") from None
+    except UnicodeDecodeError:
+        raise ConfigError(f"{path} is not valid UTF-8 text") from None
+    except OSError as exc:
+        raise ConfigError(f"could not read {path}: {exc.strerror or exc}") from None
+    try:
+        payload = json.loads(text)
     except json.JSONDecodeError as exc:
-        raise AIError(f"{path} is not valid JSON: {exc}") from None
+        raise ConfigError(f"{path} is not valid JSON: {exc}") from None
     if isinstance(payload, dict):
         entries = payload.get("providers", [])
     else:
         entries = payload
     if not isinstance(entries, list):
-        raise AIError(f"{path} must contain a 'providers' list")
+        raise ConfigError(f"{path} must contain a 'providers' list")
     cleaned: list[dict[str, Any]] = []
+    seen: set[str] = set()
     for entry in entries:
         if not isinstance(entry, dict):
-            raise AIError(f"{path} has a provider entry that is not an object")
+            raise ConfigError(f"{path} has a provider entry that is not an object")
         _reject_secret_fields(entry, path)
-        if not str(entry.get("id", "")).strip():
-            raise AIError(f"{path} has a provider entry without an id")
+        provider_id = str(entry.get("id", "")).strip()
+        if not provider_id:
+            raise ConfigError(f"{path} has a provider entry without an id")
+        if provider_id in seen:
+            # Two entries with one id would silently make the last one win,
+            # which is the kind of quiet surprise a config file should never
+            # have. The environment variable path already rejects duplicates.
+            raise ConfigError(f"{path} defines provider {provider_id!r} more than once")
+        seen.add(provider_id)
         cleaned.append(dict(entry))
     return cleaned
 
@@ -168,7 +196,7 @@ def provider_ids(
         ids = [part.strip() for part in raw.split(",") if part.strip()]
         duplicates = sorted({item for item in ids if ids.count(item) > 1})
         if duplicates:
-            raise AIError(
+            raise ConfigError(
                 f"{ENV_PREFIX}PROVIDERS lists {', '.join(duplicates)} more than once"
             )
     else:
@@ -177,7 +205,7 @@ def provider_ids(
         has_env_kind = bool(_env(env, env_prefix(provider_id) + "KIND"))
         if provider_id not in entries and not has_env_kind:
             known = ", ".join(entries) or "none configured in a file"
-            raise AIError(
+            raise ConfigError(
                 f"provider {provider_id!r} is listed in "
                 f"{ENV_PREFIX}PROVIDERS but has no config entry and no "
                 f"{env_prefix(provider_id)}KIND. Known ids: {known}"
@@ -185,14 +213,46 @@ def provider_ids(
     return ids
 
 
+def _checked_base_url(value: str, source: str) -> str:
+    """Reject a base URL that is not http(s) or that hides a credential.
+
+    ``describe()`` shows this value to a browser, and the layer promises that a
+    key never reaches a page. A URL such as
+    ``https://user:sk-...@host/v1`` would break that promise, so it is a
+    configuration error rather than a silent leak. The URL itself is never
+    echoed in the credential case, so the key cannot reach a log either.
+    """
+    if not value:
+        return ""
+    parsed = urlsplit(value)
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+        raise ConfigError(
+            f"{source}: base_url must be an http:// or https:// URL, got {value!r}"
+        )
+    if parsed.username or parsed.password:
+        raise ConfigError(
+            f"{source}: base_url must not embed a credential. Put the key in an "
+            "environment variable and name that variable with 'api_key_env'."
+        )
+    return value.rstrip("/")
+
+
 def spec_for(
     provider_id: str,
     entry: Mapping[str, Any] | None,
     env: Mapping[str, str],
+    path: Path | None = None,
 ) -> ProviderSpec | None:
-    """Merge file entry, environment overrides, and kind defaults."""
+    """Merge file entry, environment overrides, and kind defaults.
+
+    Every value is validated here, whether it came from an environment variable
+    or from the JSON file, so a typo in a file is reported as a ``ConfigError``
+    with the same clarity as a typo in a shell. ``path`` only makes the message
+    name the file; it is optional so the function stays usable on its own.
+    """
     entry = entry or {}
     prefix = env_prefix(provider_id)
+    where = f"provider {provider_id!r}" + (f" in {path}" if path is not None else "")
 
     enabled_raw = _env(env, prefix + "ENABLED")
     enabled = (
@@ -205,23 +265,27 @@ def spec_for(
 
     kind = _env(env, prefix + "KIND") or str(entry.get("kind", "")).strip()
     if not kind:
-        raise AIError(
+        raise ConfigError(
             f"provider {provider_id!r} has no kind. Set {prefix}KIND to one of: "
             + ", ".join(sorted(PROVIDER_CLASSES))
         )
     kind = kind.lower()
     if kind not in PROVIDER_CLASSES:
-        raise AIError(
+        raise ConfigError(
             f"provider {provider_id!r} has unknown kind {kind!r}. Known kinds: "
             + ", ".join(sorted(PROVIDER_CLASSES))
         )
 
     model = _env(env, prefix + "MODEL") or str(entry.get("model", "")).strip()
-    base_url = (
-        _env(env, prefix + "BASE_URL")
-        or str(entry.get("base_url", "")).strip()
-        or DEFAULT_BASE_URLS.get(kind, "")
-    )
+    base_url_raw = _env(env, prefix + "BASE_URL")
+    if base_url_raw:
+        base_url_source = prefix + "BASE_URL"
+        base_url = base_url_raw
+    else:
+        base_url_source = f"base_url for {where}"
+        base_url = (
+            str(entry.get("base_url", "")).strip() or DEFAULT_BASE_URLS.get(kind, "")
+        )
     api_key_env = (
         _env(env, prefix + "API_KEY_ENV")
         or str(entry.get("api_key_env", "")).strip()
@@ -229,24 +293,35 @@ def spec_for(
     )
 
     timeout_raw = _env(env, prefix + "TIMEOUT")
-    timeout = (
-        _float(timeout_raw, prefix + "TIMEOUT")
-        if timeout_raw
-        else float(entry.get("timeout", DEFAULT_TIMEOUT))
-    )
+    if timeout_raw:
+        timeout_source = prefix + "TIMEOUT"
+        timeout = _float(timeout_raw, timeout_source)
+    else:
+        timeout_source = f"timeout for {where}"
+        timeout = _float(entry.get("timeout", DEFAULT_TIMEOUT), timeout_source)
+    if timeout <= 0:
+        raise ConfigError(
+            f"{timeout_source} must be greater than 0 seconds, got {timeout:g}"
+        )
+
     max_tokens_raw = _env(env, prefix + "MAX_TOKENS")
-    max_tokens = (
-        _int(max_tokens_raw, prefix + "MAX_TOKENS")
-        if max_tokens_raw
-        else int(entry.get("max_tokens", DEFAULT_MAX_TOKENS))
-    )
+    if max_tokens_raw:
+        max_tokens_source = prefix + "MAX_TOKENS"
+        max_tokens = _int(max_tokens_raw, max_tokens_source)
+    else:
+        max_tokens_source = f"max_tokens for {where}"
+        default_max_tokens = entry.get("max_tokens", DEFAULT_MAX_TOKENS)
+        max_tokens = _int(default_max_tokens, max_tokens_source)
+    if max_tokens < 1:
+        raise ConfigError(f"{max_tokens_source} must be at least 1, got {max_tokens}")
+
     label = _env(env, prefix + "LABEL") or str(entry.get("label", "")).strip()
 
     return ProviderSpec(
         id=provider_id,
         kind=kind,
         model=model,
-        base_url=base_url.rstrip("/"),
+        base_url=_checked_base_url(base_url, base_url_source),
         api_key_env=api_key_env,
         timeout=timeout,
         max_tokens=max_tokens,
@@ -278,7 +353,7 @@ def build_chain(
     ids = provider_ids(source, by_id)
     providers = []
     for provider_id in ids:
-        spec = spec_for(provider_id, by_id.get(provider_id), source)
+        spec = spec_for(provider_id, by_id.get(provider_id), source, path=resolved)
         if spec is None:
             continue
         providers.append(build_provider(spec, env=source, transport=transport))

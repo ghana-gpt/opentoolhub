@@ -1,6 +1,6 @@
 PYTHON ?= python3
 
-.PHONY: help build serve validate test check clean ai-list ai-serve ai-check ai-test
+.PHONY: help build serve validate test check clean ai-list ai-serve ai-check ai-live ai-test
 
 help:
 	@echo "OpenToolHub development commands"
@@ -11,6 +11,7 @@ help:
 	@echo "  make check     Validate, test, stage, and verify the site artifact"
 	@echo "  make ai-list   List configured AI providers (fine with none)"
 	@echo "  make ai-check  Send one real request and report the model's answer"
+	@echo "  make ai-live   Run the opt-in live provider suite against that provider"
 	@echo "  make ai-serve  Serve site/ with the optional loopback AI endpoint"
 	@echo "  make ai-test   Run only the AI layer tests"
 	@echo "  make clean     Remove staged data and Python caches"
@@ -41,6 +42,9 @@ ai-serve:
 
 ai-check:
 	$(PYTHON) scripts/ai_chat.py --check
+
+ai-live:
+	OPEN_TOOL_HUB_AI_LIVE=1 $(PYTHON) -m unittest tests.test_ai_live -v
 
 ai-test:
 	$(PYTHON) -m unittest tests.test_ai -v

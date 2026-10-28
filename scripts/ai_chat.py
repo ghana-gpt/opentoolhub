@@ -70,6 +70,11 @@ def run_check(chain: AIChain, args: argparse.Namespace) -> int:
         for attempt in exc.attempts:
             print(f"  {attempt.as_dict()}", file=sys.stderr)
         return EXIT_ALL_FAILED
+    except AIError as exc:
+        # Base-class problems (for example a disabled fallback with no
+        # --provider) are usage errors, not a crashed command.
+        print(f"error: {exc}", file=sys.stderr)
+        return EXIT_USAGE
 
     completion = result.completion
     reply = (completion.text or "").strip().replace("\n", " ")[:120]
@@ -82,7 +87,7 @@ def run_check(chain: AIChain, args: argparse.Namespace) -> int:
                     "model": completion.model,
                     "latency_ms": completion.latency_ms,
                     "reply": reply,
-                    "fallback_used": len(result.attempts) > 1,
+                    "fallback_used": result.fallback_used,
                     "attempts": [attempt.as_dict() for attempt in result.attempts],
                 },
                 indent=2,
@@ -136,6 +141,15 @@ def main(argv: list[str] | None = None) -> int:
         "--system", default="", help="Optional system prompt for this request."
     )
     args = parser.parse_args(argv)
+
+    if args.no_fallback and not args.provider.strip():
+        parser.print_usage(sys.stderr)
+        print(
+            "error: --no-fallback needs --provider ID; without both, no "
+            "provider may be used at all.",
+            file=sys.stderr,
+        )
+        return EXIT_USAGE
 
     try:
         chain = build_chain()
@@ -202,7 +216,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.json:
         payload: dict[str, Any] = result.as_dict()
-        payload["fallback_used"] = len(result.attempts) > 1
+        payload["fallback_used"] = result.fallback_used
         print(json.dumps(payload, indent=2, ensure_ascii=False))
     else:
         seen = ", ".join(

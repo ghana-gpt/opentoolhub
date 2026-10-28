@@ -18,6 +18,8 @@ Safety defaults:
   cross-site form post cannot reach a provider;
 - ``Origin`` must be this loopback origin (or, with ``--allow-remote``, the
   request's own host);
+- a client that stalls mid-request is dropped after ``CLIENT_TIMEOUT_SECONDS``
+  instead of pinning a worker thread;
 - request bodies are never logged and keys never leave the process.
 """
 
@@ -37,6 +39,7 @@ from ai_providers import (
     AIChain,
     AIError,
     AllProvidersFailed,
+    ConfigError,
     Message,
     ProviderNotReady,
     UnknownProvider,
@@ -49,6 +52,10 @@ CHAT_PATH = "/api/ai/chat"
 DOCS_PATH = "docs/local-ai.md"
 MAX_BODY_BYTES = 64 * 1024
 MAX_PROMPT_CHARS = 4000
+#: Seconds a client may stall mid-request before the connection is dropped.
+#: Without it a half-sent body holds a worker thread forever; the proxy is a
+#: development server, so a short timeout costs nothing real.
+CLIENT_TIMEOUT_SECONDS = 30
 LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1", "[::1]"}
 LOOPBACK_BIND = "127.0.0.1"
 DEFAULT_PORT = config.AI_PORT
@@ -70,6 +77,7 @@ class AIRequestHandler(NoCacheHandler):
     chain_builder: ChainBuilder = staticmethod(build_chain)
     allowed_origins: frozenset[str] | None = None
     allow_remote = False
+    timeout = CLIENT_TIMEOUT_SECONDS
 
     # -- helpers -----------------------------------------------------------
     def _chain(self) -> AIChain:
@@ -268,6 +276,18 @@ class AIRequestHandler(NoCacheHandler):
                 },
             )
             return
+        except ConfigError as exc:
+            # 503: the request was fine, the local setup is not. Saying 400 here
+            # would blame the caller for a file they may not even own.
+            self._send_json(
+                503,
+                {
+                    "error": "ai is misconfigured",
+                    "detail": str(exc),
+                    "docs": DOCS_PATH,
+                },
+            )
+            return
         except AIError as exc:
             self._send_json(400, {"error": "ai request failed", "detail": str(exc)})
             return
@@ -413,8 +433,10 @@ def main(argv: list[str] | None = None) -> int:
             stage_data=not args.no_stage,
         )
     except AIError as exc:
+        # A configuration problem is a setup mistake, not "every provider
+        # failed": the same code the CLI uses keeps the two apart.
         print(f"error: {exc}", file=sys.stderr)
-        return 4
+        return 2
 
 
 if __name__ == "__main__":

@@ -1,9 +1,11 @@
 """Tests for the optional local AI layer.
 
-Nothing here needs a network, a key, or a running model: provider HTTP calls go
-through an injected transport, and the proxy tests use a throwaway server on
-port 0 with a stubbed chain. Real end-to-end proof against Ollama is a manual
-step documented in ``docs/local-ai.md``.
+Nothing here needs an external network, a key, or a running model: provider HTTP
+calls go through an injected transport, the proxy tests use a throwaway server on
+port 0 with a stubbed chain, and ``TransportTests`` drives the real stdlib client
+against a loopback stub so timeouts and HTTP errors are proven rather than
+assumed. Real end-to-end proof against a running provider lives in the opt-in
+``tests/test_ai_live.py``; ``docs/local-ai.md`` documents both.
 """
 
 from __future__ import annotations
@@ -12,13 +14,15 @@ import contextlib
 import io
 import json
 import os
+import socket
 import sys
 import tempfile
 import threading
+import time
 import unittest
 import urllib.error
 import urllib.request
-from http.server import ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from functools import partial
 from pathlib import Path
 from typing import Any
@@ -29,12 +33,15 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import ai_chat  # noqa: E402
 import ai_config  # noqa: E402
+import ai_providers  # noqa: E402
 import ai_proxy  # noqa: E402
 from ai_providers import (  # noqa: E402
     AIChain,
     AIError,
     AllProvidersFailed,
     AnthropicProvider,
+    ConfigError,
+    MAX_ERROR_CHARS,
     Message,
     OllamaProvider,
     OpenAICompatibleProvider,
@@ -46,6 +53,7 @@ from ai_providers import (  # noqa: E402
     QwenProvider,
     UnknownProvider,
     build_provider,
+    http_post_json,
     redact,
 )
 
@@ -464,7 +472,41 @@ class ChainTests(unittest.TestCase):
         self.assertEqual(described["ready_count"], 2)
 
 
+    def test_fallback_used_ignores_providers_that_were_never_called(self):
+        chain = self._chain(
+            build_provider(spec("cloud", "openai"), env={}),
+            build_provider(
+                spec("local", "ollama"),
+                env={},
+                transport=RecordingTransport({"message": {"content": "hi"}}),
+            ),
+        )
+        result = chain.complete([Message("user", "hi")])
+        self.assertEqual(
+            [attempt.status for attempt in result.attempts], ["skipped", "ok"]
+        )
+        # one provider answered and the other was never asked: no fallback
+        self.assertFalse(result.fallback_used)
+
+    def test_fallback_used_is_true_when_a_provider_really_failed(self):
+        chain = self._chain(
+            build_provider(
+                spec("a", "ollama"),
+                env={},
+                transport=RecordingTransport(ProviderError("down")),
+            ),
+            build_provider(
+                spec("b", "ollama"),
+                env={},
+                transport=RecordingTransport({"message": {"content": "hi"}}),
+            ),
+        )
+        result = chain.complete([Message("user", "hi")])
+        self.assertTrue(result.fallback_used)
+
+
 class ConfigTests(unittest.TestCase):
+
     def write_config(self, payload: Any, directory: Path) -> Path:
         path = directory / "ai-providers.local.json"
         path.write_text(json.dumps(payload), encoding="utf-8")
@@ -574,9 +616,13 @@ class ConfigTests(unittest.TestCase):
                 },
                 Path(tmp),
             )
-            with self.assertRaises(AIError) as caught:
+            with self.assertRaises(ConfigError) as caught:
                 ai_config.build_chain(env={}, path=path)
-            self.assertIn("api_key_env", str(caught.exception))
+            message = str(caught.exception)
+            self.assertIn("api_key_env", message)
+            # the value that was wrongly stored must not be echoed back
+            self.assertNotIn("'secret'", message)
+            self.assertNotIn(": secret", message)
 
     def test_key_is_read_from_the_named_variable(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -598,9 +644,32 @@ class ConfigTests(unittest.TestCase):
             self.assertNotIn(FAKE_KEY, json.dumps(chain.describe()))
 
     def test_missing_explicit_config_file_is_an_error(self):
-        with self.assertRaises(AIError) as caught:
+        with self.assertRaises(ConfigError) as caught:
             ai_config.config_path({"OPEN_TOOL_HUB_AI_CONFIG": "/nope/missing.json"})
         self.assertIn("missing", str(caught.exception))
+
+    def test_config_problems_are_distinguishable_from_call_failures(self):
+        # The proxy answers 503 for one and 400/502 for the other, so the type
+        # has to be part of the contract rather than a convention.
+        self.assertTrue(issubclass(ConfigError, AIError))
+        self.assertFalse(issubclass(ProviderError, ConfigError))
+        self.assertFalse(issubclass(AllProvidersFailed, ConfigError))
+        for env in (
+            {"OPEN_TOOL_HUB_AI_PROVIDERS": "x"},
+            {
+                "OPEN_TOOL_HUB_AI_PROVIDERS": "x",
+                "OPEN_TOOL_HUB_AI_X_KIND": "telepathy",
+                "OPEN_TOOL_HUB_AI_X_MODEL": "m",
+            },
+            {
+                "OPEN_TOOL_HUB_AI_PROVIDERS": "x",
+                "OPEN_TOOL_HUB_AI_X_KIND": "ollama",
+                "OPEN_TOOL_HUB_AI_X_MODEL": "m",
+                "OPEN_TOOL_HUB_AI_X_TIMEOUT": "soon",
+            },
+        ):
+            with self.assertRaises(ConfigError):
+                ai_config.build_chain(env=env, use_default_config=False)
 
     def test_duplicate_ids_in_the_providers_variable_are_rejected(self):
         env = {
@@ -634,13 +703,13 @@ class ConfigTests(unittest.TestCase):
             "OPEN_TOOL_HUB_AI_X_KIND": "telepathy",
             "OPEN_TOOL_HUB_AI_X_MODEL": "m",
         }
-        with self.assertRaises(AIError) as caught:
+        with self.assertRaises(ConfigError) as caught:
             ai_config.build_chain(env=env, use_default_config=False)
         self.assertIn("telepathy", str(caught.exception))
         self.assertIn("ollama", str(caught.exception))
 
     def test_missing_kind_is_reported(self):
-        with self.assertRaises(AIError) as caught:
+        with self.assertRaises(ConfigError) as caught:
             ai_config.build_chain(
                 env={"OPEN_TOOL_HUB_AI_PROVIDERS": "x"}, use_default_config=False
             )
@@ -656,6 +725,394 @@ class ConfigTests(unittest.TestCase):
         with self.assertRaises(AIError) as caught:
             ai_config.build_chain(env=env, use_default_config=False)
         self.assertIn("OPEN_TOOL_HUB_AI_X_TIMEOUT", str(caught.exception))
+
+
+class ConfigFileValidationTests(unittest.TestCase):
+    """A typo in a git-ignored file is a ``ConfigError``, never a traceback.
+
+    ``ValueError`` and ``TypeError`` from a JSON value used to escape the config
+    layer, where nobody caught them: the CLI printed a traceback and
+    ``ai_proxy.py`` died before it bound its port, so one bad ``"timeout"`` took
+    the whole static site down. Every malformed value is now a ``ConfigError``,
+    which the proxy turns into a ``503`` while it keeps serving pages.
+    """
+
+    def build(
+        self, entry: dict[str, Any], env: dict[str, str] | None = None
+    ) -> AIChain:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / ai_config.DEFAULT_CONFIG_NAME
+            path.write_text(json.dumps({"providers": [entry]}), encoding="utf-8")
+            return ai_config.build_chain(env=env or {}, path=path)
+
+    def assert_config_error(
+        self,
+        entry: dict[str, Any],
+        needle: str,
+        env: dict[str, str] | None = None,
+    ) -> str:
+        with self.assertRaises(ConfigError) as caught:
+            self.build(entry, env)
+        message = str(caught.exception)
+        self.assertIn(needle, message)
+        # the message has to say where the value lives
+        self.assertIn(ai_config.DEFAULT_CONFIG_NAME, message)
+        return message
+
+    def test_a_file_timeout_that_is_not_a_number_names_the_file(self):
+        message = self.assert_config_error(
+            {"id": "x", "kind": "ollama", "model": "m", "timeout": "soon"},
+            "must be a number",
+        )
+        self.assertIn("'soon'", message)
+        self.assertIn("'x'", message)
+
+    def test_empty_values_are_rejected_rather_than_coerced(self):
+        for field_name in ("timeout", "max_tokens"):
+            for value in (None, True, False):
+                with self.subTest(field=field_name, value=value):
+                    self.assert_config_error(
+                        {"id": "x", "kind": "ollama", "model": "m", field_name: value},
+                        "must be",
+                    )
+
+    def test_a_file_timeout_must_be_positive(self):
+        for value in (0, -5):
+            with self.subTest(value=value):
+                self.assert_config_error(
+                    {"id": "x", "kind": "ollama", "model": "m", "timeout": value},
+                    "greater than 0 seconds",
+                )
+
+    def test_a_file_max_tokens_must_be_a_positive_whole_number(self):
+        for value, needle in ((0, "at least 1"), (-3, "at least 1"), (2.5, "integer")):
+            with self.subTest(value=value):
+                self.assert_config_error(
+                    {"id": "x", "kind": "ollama", "model": "m", "max_tokens": value},
+                    needle,
+                )
+
+    def test_whole_numbers_in_a_file_are_accepted(self):
+        chain = self.build(
+            {
+                "id": "x",
+                "kind": "ollama",
+                "model": "m",
+                "timeout": 120,
+                "max_tokens": 64,
+            }
+        )
+        entry = chain.providers[0].spec
+        self.assertEqual(entry.timeout, 120.0)
+        self.assertEqual(entry.max_tokens, 64)
+
+
+    def test_an_environment_timeout_must_be_positive_too(self):
+        with self.assertRaises(ConfigError) as caught:
+            ai_config.build_chain(
+                env={
+                    "OPEN_TOOL_HUB_AI_PROVIDERS": "x",
+                    "OPEN_TOOL_HUB_AI_X_KIND": "ollama",
+                    "OPEN_TOOL_HUB_AI_X_MODEL": "m",
+                    "OPEN_TOOL_HUB_AI_X_TIMEOUT": "0",
+                },
+                use_default_config=False,
+            )
+        self.assertIn("greater than 0 seconds", str(caught.exception))
+
+    def test_a_duplicate_id_in_a_file_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / ai_config.DEFAULT_CONFIG_NAME
+            path.write_text(
+                json.dumps(
+                    {
+                        "providers": [
+                            {"id": "x", "kind": "ollama", "model": "first"},
+                            {"id": "x", "kind": "ollama", "model": "second"},
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaises(ConfigError) as caught:
+                ai_config.build_chain(env={}, path=path)
+            message = str(caught.exception)
+            self.assertIn("more than once", message)
+            self.assertIn("'x'", message)
+
+    def test_a_file_that_is_not_utf8_is_a_config_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / ai_config.DEFAULT_CONFIG_NAME
+            path.write_bytes(b'{"providers": [{"id": "x", "label": "caf\xe9"}]}')
+            with self.assertRaises(ConfigError) as caught:
+                ai_config.build_chain(env={}, path=path)
+            self.assertIn("UTF-8", str(caught.exception))
+
+    def test_a_path_that_cannot_be_read_is_a_config_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for path, needle in (
+                (root, "could not read"),
+                (root / "missing.json", "does not exist"),
+            ):
+                with self.subTest(path=path):
+                    with self.assertRaises(ConfigError) as caught:
+                        ai_config.build_chain(env={}, path=path)
+                    self.assertIn(needle, str(caught.exception))
+
+    def test_a_base_url_must_be_http_or_https(self):
+        for value in ("api.example.com/v1", "ftp://example.com/v1", "http://"):
+            with self.subTest(value=value):
+                self.assert_config_error(
+                    {
+                        "id": "x",
+                        "kind": "openai-compatible",
+                        "model": "m",
+                        "base_url": value,
+                    },
+                    "must be an http",
+                )
+
+    def test_a_base_url_may_not_smuggle_a_credential(self):
+        message = self.assert_config_error(
+            {
+                "id": "x",
+                "kind": "openai-compatible",
+                "model": "m",
+                "base_url": f"https://user:{FAKE_KEY}@api.example.com/v1",
+            },
+            "must not embed a credential",
+        )
+        # the URL is not echoed, so the key cannot reach a log or a browser
+        self.assertNotIn(FAKE_KEY, message)
+
+    def test_an_environment_base_url_is_validated_too(self):
+        with self.assertRaises(ConfigError) as caught:
+            ai_config.build_chain(
+                env={
+                    "OPEN_TOOL_HUB_AI_PROVIDERS": "x",
+                    "OPEN_TOOL_HUB_AI_X_KIND": "ollama",
+                    "OPEN_TOOL_HUB_AI_X_MODEL": "m",
+                    "OPEN_TOOL_HUB_AI_X_BASE_URL": "127.0.0.1:11434",
+                },
+                use_default_config=False,
+            )
+        message = str(caught.exception)
+        self.assertIn("must be an http", message)
+        # the message names the variable the value came from, not a file
+        self.assertIn("OPEN_TOOL_HUB_AI_X_BASE_URL", message)
+
+    def test_an_environment_base_url_may_not_smuggle_a_credential_either(self):
+        with self.assertRaises(ConfigError) as caught:
+            ai_config.build_chain(
+                env={
+                    "OPEN_TOOL_HUB_AI_PROVIDERS": "x",
+                    "OPEN_TOOL_HUB_AI_X_KIND": "openai-compatible",
+                    "OPEN_TOOL_HUB_AI_X_MODEL": "m",
+                    "OPEN_TOOL_HUB_AI_X_BASE_URL": (
+                        f"https://user:{FAKE_KEY}@api.example.com/v1"
+                    ),
+                },
+                use_default_config=False,
+            )
+        message = str(caught.exception)
+        self.assertIn("must not embed a credential", message)
+        self.assertIn("OPEN_TOOL_HUB_AI_X_BASE_URL", message)
+        self.assertNotIn(FAKE_KEY, message)
+
+
+class StubHTTPHandler(BaseHTTPRequestHandler):
+
+
+    """A loopback server that answers ``POST`` with a canned route table.
+
+    ``routes`` maps a path to ``(status, payload, delay)``; ``payload`` may be
+    bytes or a callable that receives the handler (so a route can echo a header
+    back, which is how the redaction test proves the key really travelled).
+    """
+
+    routes: dict[str, tuple[int, Any, float]] = {}
+    requests: list[dict[str, Any]] = []
+
+    def do_POST(self) -> None:  # noqa: N802 - stdlib naming
+        length = int(self.headers.get("Content-Length") or 0)
+        raw = self.rfile.read(length)
+        type(self).requests.append(
+            {
+                "path": self.path,
+                "headers": dict(self.headers),
+                "body": json.loads(raw.decode("utf-8") or "{}"),
+            }
+        )
+        status, payload, delay = type(self).routes.get(
+            self.path, (404, b'{"error":"no route"}', 0.0)
+        )
+        if callable(payload):
+            payload = payload(self)
+        if delay:
+            time.sleep(delay)
+        body = payload if isinstance(payload, bytes) else json.dumps(payload).encode()
+        try:
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+        except OSError:  # the client already gave up (the timeout test)
+            pass
+
+    def log_message(self, format: str, *args: Any) -> None:
+        pass
+
+
+class TransportTests(unittest.TestCase):
+    """The real ``http_post_json`` socket path, against a loopback stub.
+
+    The adapter tests inject a transport, which leaves the actual client — time
+    limits, HTTP error mapping, response parsing — unproven. These tests drive
+    it end to end over a real socket on port 0.
+    """
+
+    def setUp(self) -> None:
+        StubHTTPHandler.routes = {}
+        StubHTTPHandler.requests = []
+        self.server = ThreadingHTTPServer(("127.0.0.1", 0), StubHTTPHandler)
+        self.server.daemon_threads = True
+        threading.Thread(target=self.server.serve_forever, daemon=True).start()
+        self.addCleanup(self.server.server_close)
+        self.addCleanup(self.server.shutdown)
+        self.base = f"http://127.0.0.1:{self.server.server_address[1]}"
+
+    def route(
+        self, path: str, *, status: int = 200, payload: Any = None, delay: float = 0.0
+    ) -> str:
+        StubHTTPHandler.routes[path] = (status, payload, delay)
+        return self.base + path
+
+    @staticmethod
+    def closed_port() -> int:
+        """A port nobody listens on, so a connection is refused immediately."""
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+            probe.bind(("127.0.0.1", 0))
+            return int(probe.getsockname()[1])
+
+    # -- happy path --------------------------------------------------------
+    def test_a_json_post_returns_the_parsed_object(self):
+        url = self.route("/ok", payload={"message": {"content": "hello"}})
+        payload = http_post_json(
+            url, {"Content-Type": "application/json"}, {"model": "m"}, 5.0
+        )
+        self.assertEqual(payload, {"message": {"content": "hello"}})
+        seen = StubHTTPHandler.requests[-1]
+        self.assertEqual(seen["path"], "/ok")
+        self.assertEqual(seen["headers"]["Content-Type"], "application/json")
+        self.assertEqual(seen["body"], {"model": "m"})
+
+    def test_a_provider_completes_through_the_real_transport(self):
+        self.route(
+            "/chat/completions",
+            payload={
+                "choices": [{"message": {"content": "real answer"}}],
+                "usage": {"total_tokens": 7},
+            },
+        )
+        provider = build_provider(
+            spec("local", "openai-compatible", base_url=self.base, timeout=5.0),
+            env={},
+        )
+        completion = provider.complete([Message("user", "hi")])
+        self.assertEqual(completion.text, "real answer")
+        self.assertEqual(completion.usage, {"total_tokens": 7})
+        self.assertGreaterEqual(completion.latency_ms, 0)
+
+    # -- failure shapes ----------------------------------------------------
+    def test_an_http_error_names_the_status_and_bounds_the_detail(self):
+        url = self.route("/fail", status=401, payload={"error": "denied " * 200})
+        with self.assertRaises(ProviderError) as caught:
+            http_post_json(url, {}, {"model": "m"}, 5.0)
+        message = str(caught.exception)
+        self.assertIn(f"HTTP 401 from {url}", message)
+        self.assertLessEqual(
+            len(message), len(f"HTTP 401 from {url}: ") + MAX_ERROR_CHARS
+        )
+
+    def test_a_non_json_reply_is_a_clear_error(self):
+        url = self.route("/html", payload=b"<html>nope</html>")
+        with self.assertRaises(ProviderError) as caught:
+            http_post_json(url, {}, {}, 5.0)
+        self.assertIn("returned a non-JSON response", str(caught.exception))
+        self.assertIn(url, str(caught.exception))
+
+    def test_json_that_is_not_an_object_is_rejected(self):
+        url = self.route("/array", payload=b"[1, 2, 3]")
+        with self.assertRaises(ProviderError) as caught:
+            http_post_json(url, {}, {}, 5.0)
+        self.assertIn("returned JSON that is not an object", str(caught.exception))
+
+    def test_a_closed_port_reports_that_the_server_is_unreachable(self):
+        url = f"http://127.0.0.1:{self.closed_port()}/v1/chat/completions"
+        with self.assertRaises(ProviderError) as caught:
+            http_post_json(url, {}, {"model": "m"}, 1.0)
+        self.assertIn(f"could not reach {url}", str(caught.exception))
+
+    def test_a_slow_server_times_out_without_hanging(self):
+        url = self.route(
+            "/slow", payload={"message": {"content": "too late"}}, delay=1.0
+        )
+        started = time.monotonic()
+        with self.assertRaises(ProviderError) as caught:
+            http_post_json(url, {}, {}, 0.2)
+        elapsed = time.monotonic() - started
+        self.assertIn("could not reach", str(caught.exception))
+        self.assertLess(elapsed, 0.9, f"the timeout took {elapsed:.2f}s")
+
+    def test_a_slow_provider_is_an_error_not_a_hang(self):
+        self.route("/api/chat", payload={"message": {"content": "late"}}, delay=1.0)
+        provider = build_provider(
+            spec("local", "ollama", base_url=self.base, timeout=0.2), env={}
+        )
+        started = time.monotonic()
+        with self.assertRaises(ProviderError):
+            provider.complete([Message("user", "hi")])
+        self.assertLess(time.monotonic() - started, 0.9)
+
+    # -- secrets -----------------------------------------------------------
+    def test_the_key_is_redacted_before_it_reaches_a_caller(self):
+        """The server sees the bearer token; nothing the caller sees contains it."""
+
+        def echo_auth(handler: BaseHTTPRequestHandler) -> bytes:
+            return json.dumps(
+                {"error": "bad token " + (handler.headers.get("Authorization") or "")}
+            ).encode()
+
+        self.route("/chat/completions", status=500, payload=echo_auth)
+        chain = AIChain(
+            [
+                build_provider(
+                    spec(
+                        "cloud",
+                        "openai",
+                        base_url=self.base,
+                        timeout=5.0,
+                        api_key_env="TEST_API_KEY",
+                    ),
+                    env={"TEST_API_KEY": FAKE_KEY},
+                )
+            ]
+        )
+        with self.assertRaises(AllProvidersFailed) as caught:
+            chain.complete([Message("user", "hi")])
+        visible = str(caught.exception) + json.dumps(
+            [attempt.as_dict() for attempt in caught.exception.attempts]
+        )
+        self.assertIn("HTTP 500", visible)
+        self.assertNotIn(FAKE_KEY, visible)
+        self.assertIn("***", visible)
+        self.assertEqual(
+            StubHTTPHandler.requests[-1]["headers"].get("Authorization"),
+            f"Bearer {FAKE_KEY}",
+            "the stub must have received the key, or this proves nothing",
+        )
 
 
 class ProxyTests(unittest.TestCase):
@@ -866,6 +1323,77 @@ class ProxyTests(unittest.TestCase):
         self.assertEqual(status, 502)
         self.assertEqual(payload["error"], "no provider answered")
         self.assertIn("connection refused", payload["attempts"][0]["error"])
+
+    def test_a_broken_config_is_a_503_and_leaves_the_site_up(self):
+        def broken() -> AIChain:
+            raise ConfigError("provider 'local' has unknown kind 'nope'")
+
+        base = self.serve(broken)
+        status, payload = self.call(
+            base, "/api/ai/chat", method="POST", body={"prompt": "hi"}
+        )
+        self.assertEqual(status, 503, payload)
+        self.assertEqual(payload["error"], "ai is misconfigured")
+        self.assertIn("unknown kind", payload["detail"])
+        self.assertEqual(payload["docs"], DOCS)
+
+        # the misconfiguration is the operator's problem, not the page's
+        status, page = self.call(base, "/ai.html")
+        self.assertEqual(status, 200)
+        self.assertIn("ai", page)
+        status, described = self.call(base, "/api/ai/status")
+        self.assertEqual(status, 200)
+        self.assertEqual(described["mode"], "setup")
+        self.assertIn("unknown kind", described["error"])
+
+    def test_a_broken_config_is_never_reported_as_a_client_error(self):
+        def broken() -> AIChain:
+            raise ConfigError("OPEN_TOOL_HUB_AI_X_TIMEOUT must be a number")
+
+        base = self.serve(broken)
+        status, _ = self.call(
+            base, "/api/ai/chat", method="POST", body={"prompt": "hi"}
+        )
+        self.assertNotEqual(status, 400)
+        self.assertEqual(status, 503)
+
+    def test_a_malformed_config_file_is_a_503_and_the_site_stays_up(self):
+        """The real path: a typo in the JSON file, served by the real config layer."""
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / ai_config.DEFAULT_CONFIG_NAME
+            path.write_text(
+                json.dumps(
+                    {
+                        "providers": [
+                            {
+                                "id": "local",
+                                "kind": "ollama",
+                                "model": "m",
+                                "timeout": "soon",
+                            }
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            base = self.serve(partial(ai_config.build_chain, env={}, path=path))
+
+            status, page = self.call(base, "/ai.html")
+            self.assertEqual(status, 200)
+            self.assertIn("ai", page)
+
+            status, described = self.call(base, "/api/ai/status")
+            self.assertEqual(status, 200)
+            self.assertEqual(described["mode"], "setup")
+            self.assertIn("must be a number", described["error"])
+
+            status, payload = self.call(
+                base, "/api/ai/chat", method="POST", body={"prompt": "hi"}
+            )
+            self.assertEqual(status, 503, payload)
+            self.assertEqual(payload["error"], "ai is misconfigured")
+            self.assertIn("must be a number", payload["detail"])
+            self.assertEqual(payload["docs"], DOCS)
 
     def test_a_failing_transport_never_leaks_the_key(self):
         chain = AIChain(
@@ -1118,6 +1646,41 @@ class CliTests(unittest.TestCase):
         self.assertEqual(code, 3)
         self.assertIn("no AI providers are configured", err)
 
+    def test_no_fallback_without_a_provider_is_a_usage_error(self):
+        # Before this group existed the command raised a bare AIError and left
+        # Python to print a traceback with exit 1, which is not one of the
+        # documented codes.
+        code, out, err = self.run_cli(["--no-fallback", "--check"], {})
+        self.assertEqual(code, 2)
+        self.assertEqual(out, "")
+        self.assertIn("--no-fallback needs --provider", err)
+        self.assertNotIn("Traceback", err)
+
+    def test_no_fallback_without_a_provider_is_a_usage_error_for_a_prompt_too(self):
+        code, _, err = self.run_cli(["--no-fallback", "hello"], {})
+        self.assertEqual(code, 2)
+        self.assertIn("--provider", err)
+
+    def test_check_json_does_not_claim_a_fallback_that_never_happened(self):
+        transport = RecordingTransport({"message": {"content": "ready"}})
+        chain = AIChain(
+            [
+                build_provider(spec("local", "ollama"), env={}, transport=transport),
+                # configured but unready: recorded as "skipped", never called
+                build_provider(spec("cloud", "openai"), env={}),
+            ]
+        )
+        out, err = io.StringIO(), io.StringIO()
+        with mock.patch.object(ai_chat, "build_chain", return_value=chain):
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                code = ai_chat.main(["--check", "--json"])
+        self.assertEqual(code, 0, err.getvalue())
+        payload = json.loads(out.getvalue())
+        self.assertEqual(
+            [attempt["status"] for attempt in payload["attempts"]], ["skipped", "ok"]
+        )
+        self.assertFalse(payload["fallback_used"])
+
     def run_check_cli(
         self, *payloads: Any, argv: list[str] | None = None
     ) -> tuple[int, str, str, RecordingTransport]:
@@ -1274,3 +1837,17 @@ class HygieneTests(unittest.TestCase):
         self.assertIn("OPEN_TOOL_HUB_AI_PROVIDERS", text)
         self.assertIn("docs/local-ai.md", text)
         self.assertIn("\n# OPENAI_API_KEY=\n", text)
+
+    def test_the_proxy_drops_a_client_that_stalls_mid_request(self):
+        # Without a socket timeout a half-sent body holds a worker thread for
+        # as long as the client keeps the connection open.
+        self.assertIsInstance(ai_proxy.CLIENT_TIMEOUT_SECONDS, int)
+        self.assertGreater(ai_proxy.CLIENT_TIMEOUT_SECONDS, 0)
+        self.assertEqual(
+            ai_proxy.AIRequestHandler.timeout, ai_proxy.CLIENT_TIMEOUT_SECONDS
+        )
+
+    def test_config_error_is_part_of_the_public_surface(self):
+        self.assertIn("ConfigError", ai_providers.__all__)
+        self.assertIn("ConfigError", dir(ai_providers))
+
