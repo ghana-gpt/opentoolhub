@@ -18,8 +18,11 @@ Design rules, in order of importance:
 
 from __future__ import annotations
 
+import http.client
 import json
+import math
 import os
+import re
 import time
 import urllib.error
 import urllib.request
@@ -39,6 +42,7 @@ __all__ = [
     "DEFAULT_BASE_URLS",
     "DeepSeekProvider",
     "KINDS",
+    "MAX_ERROR_CHARS",
     "Message",
     "OllamaProvider",
     "OpenAICompatibleProvider",
@@ -52,6 +56,7 @@ __all__ = [
     "UnknownProvider",
     "available_kinds",
     "build_provider",
+    "check_provider_id",
     "normalize_messages",
     "redact",
 ]
@@ -132,6 +137,34 @@ class AllProvidersFailed(AIError):
         )
 
 
+#: A provider id becomes part of an environment-variable name, a ``--provider``
+#: value, and a key in ``/api/ai/status``, so it must be a plain token.
+PROVIDER_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
+
+#: A key travels in an HTTP header, where a newline is a protocol error and
+#: anything outside Latin-1 cannot be encoded at all.
+_API_KEY_FORBIDDEN = re.compile(r"[\x00-\x1f\x7f]")
+
+
+def check_provider_id(provider_id: str, *, source: str = "") -> str:
+    """Return ``provider_id`` stripped, or raise :class:`ConfigError`.
+
+    ``OPEN_TOOL_HUB_AI_<ID>_KIND`` is derived from the id by upper-casing it,
+    so an id with a space or a slash would silently point at a variable nobody
+    can set, and the same id is echoed to a browser and printed by ``--list``.
+    """
+    cleaned = str(provider_id or "").strip()
+    where = f"{source}: " if source else ""
+    if not cleaned:
+        raise ConfigError(f"{where}a provider needs a non-empty id")
+    if not PROVIDER_ID_PATTERN.match(cleaned):
+        raise ConfigError(
+            f"{where}provider id {cleaned!r} may only contain letters, digits, "
+            "'-', '_' and '.', and must start with a letter or a digit"
+        )
+    return cleaned
+
+
 def redact(text: str, secrets: Iterable[str]) -> str:
     """Replace any configured key with ``***`` so errors stay safe to print."""
     result = str(text)
@@ -186,6 +219,62 @@ class ProviderSpec:
     timeout: float = 60.0
     max_tokens: int = 512
     label: str = ""
+
+    def __post_init__(self) -> None:
+        """Reject a spec that could only fail later, inside a request.
+
+        A spec is built from the environment or a file, and both paths are
+        validated in ``ai_config``; this second check exists because a spec can
+        also be built by hand (tests, a future embedding) and because a value
+        such as ``float("nan")`` reaches ``urllib`` as "Invalid value NaN" —
+        a ``ValueError`` deep inside ``http.client``, not a sentence a user can
+        act on. Every failure here is a :class:`ConfigError`, which the proxy
+        answers with ``503`` instead of a traceback.
+        """
+        provider_id = check_provider_id(self.id)
+        kind = str(self.kind or "").strip().lower()
+        if not kind:
+            raise ConfigError(f"provider {provider_id!r} has no kind")
+        timeout = self.timeout
+        if isinstance(timeout, bool) or not isinstance(timeout, (int, float)):
+            raise ConfigError(
+                f"timeout for provider {provider_id!r} must be a number, "
+                f"got {timeout!r}"
+            )
+        if not math.isfinite(float(timeout)):
+            raise ConfigError(
+                f"timeout for provider {provider_id!r} must be a finite number, "
+                f"got {timeout!r}"
+            )
+        if float(timeout) <= 0:
+            raise ConfigError(
+                f"timeout for provider {provider_id!r} must be greater than 0 "
+                f"seconds, got {float(timeout):g}"
+            )
+        max_tokens = self.max_tokens
+        if isinstance(max_tokens, bool) or not isinstance(max_tokens, (int, float)):
+            raise ConfigError(
+                f"max_tokens for provider {provider_id!r} must be an integer, "
+                f"got {max_tokens!r}"
+            )
+        if isinstance(max_tokens, float) and not max_tokens.is_integer():
+            raise ConfigError(
+                f"max_tokens for provider {provider_id!r} must be a whole number "
+                f"of at least 1, got {max_tokens!r}"
+            )
+        if max_tokens < 1:
+            raise ConfigError(
+                f"max_tokens for provider {provider_id!r} must be a whole number "
+                f"of at least 1, got {max_tokens!r}"
+            )
+        object.__setattr__(self, "id", provider_id)
+        object.__setattr__(self, "kind", kind)
+        object.__setattr__(self, "model", str(self.model or "").strip())
+        object.__setattr__(self, "base_url", str(self.base_url or "").strip())
+        object.__setattr__(self, "api_key_env", str(self.api_key_env or "").strip())
+        object.__setattr__(self, "timeout", float(timeout))
+        object.__setattr__(self, "max_tokens", int(max_tokens))
+        object.__setattr__(self, "label", str(self.label or "").strip())
 
     def display_name(self) -> str:
         return self.label or self.id
@@ -300,6 +389,12 @@ def http_post_json(
         raise ProviderError(f"could not reach {url}: {exc.reason}") from None
     except (TimeoutError, OSError) as exc:
         raise ProviderError(f"could not reach {url}: {exc}") from None
+    except (http.client.HTTPException, ValueError) as exc:
+        # A port that answers with something that is not HTTP, or a URL or
+        # header the stdlib refuses, is "could not reach" from here: the
+        # server never produced a usable reply, so this is not a bad request
+        # from the caller's point of view.
+        raise ProviderError(f"could not reach {url}: {exc}") from None
     try:
         payload = json.loads(raw.decode("utf-8"))
     except (UnicodeDecodeError, ValueError):
@@ -364,14 +459,29 @@ class Provider:
         ready, reason = self.readiness()
         if not ready:
             raise ProviderNotReady(f"provider {self.spec.id!r} is not ready: {reason}")
-        url, headers, body = self.build_request(normalized)
         started = time.monotonic()
         try:
+            url, headers, body = self.build_request(normalized)
             payload = self._transport(url, headers, body, float(self.spec.timeout))
+            text, usage = self.parse_response(payload)
         except AIError as exc:
             raise ProviderError(redact(str(exc), self.secrets())) from None
+        except (ValueError, TypeError, OSError, http.client.HTTPException) as exc:
+            # Defence in depth. A header the stdlib refuses, a URL it cannot
+            # use, or a transport that raises a plain stdlib error must still
+            # arrive as one sentence: this code runs inside a request handler,
+            # where an escaping exception is a stack trace on the operator's
+            # terminal and a truncated reply for the browser. The message is
+            # redacted because a stdlib error can quote the header it rejected.
+            raise ProviderError(
+                redact(
+                    f"provider {self.spec.id!r} could not complete the request: "
+                    f"{type(exc).__name__}: {exc}",
+                    self.secrets(),
+                )
+            ) from None
         latency = int((time.monotonic() - started) * 1000)
-        text, usage = self.parse_response(payload)
+        text = str(text or "")
         if not text.strip():
             raise ProviderError(f"provider {self.spec.id!r} returned an empty answer")
         return Completion(
@@ -565,6 +675,37 @@ def available_kinds() -> list[str]:
     return list(PROVIDER_CLASSES)
 
 
+def resolve_api_key(spec: ProviderSpec, env: Mapping[str, str]) -> str:
+    """Read the key named by ``spec.api_key_env`` and check it can be sent.
+
+    A key is a single token that travels in an HTTP header. A value with a
+    newline in it — easy to produce with a stray ``\\n`` in ``.env`` — makes
+    ``http.client`` raise ``ValueError: Invalid header value`` halfway into a
+    request, which used to surface as a traceback in the proxy. Checking here
+    turns that into a configuration error at startup instead, and the message
+    names the variable, never the value.
+    """
+    if not spec.api_key_env:
+        return ""
+    api_key = (env.get(spec.api_key_env) or "").strip()
+    if not api_key:
+        return ""
+    if _API_KEY_FORBIDDEN.search(api_key):
+        raise ConfigError(
+            f"{spec.api_key_env} holds a value with a newline or another control "
+            "character. A key is a single token; check for a stray quote or a "
+            "line break in your .env file."
+        )
+    try:
+        api_key.encode("latin-1")
+    except UnicodeEncodeError:
+        raise ConfigError(
+            f"{spec.api_key_env} contains characters that cannot be sent in an "
+            "HTTP header. A key is normally plain ASCII."
+        ) from None
+    return api_key
+
+
 def build_provider(
     spec: ProviderSpec,
     *,
@@ -584,9 +725,7 @@ def build_provider(
             f"unknown provider kind {spec.kind!r}; known kinds: "
             + ", ".join(sorted(PROVIDER_CLASSES))
         )
-    api_key = ""
-    if spec.api_key_env:
-        api_key = (source.get(spec.api_key_env) or "").strip()
+    api_key = resolve_api_key(spec, source)
     return provider_class(spec, api_key=api_key, transport=transport)
 
 

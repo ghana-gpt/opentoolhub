@@ -152,6 +152,103 @@ class RegistryTests(unittest.TestCase):
         )
 
 
+class ProviderSpecTests(unittest.TestCase):
+    """A spec that cannot work is refused where it is built.
+
+    ``ProviderSpec`` is a value object: the environment path and the file path
+    both validate their input, but a spec built by hand (a test, an embedding)
+    used to reach ``urllib`` with whatever it was given, and an invalid timeout
+    surfaced as ``ValueError: Invalid value NaN`` from deep inside
+    ``http.client`` — a traceback in the proxy, not a sentence for the operator.
+    """
+
+    def test_an_empty_id_is_rejected(self):
+        with self.assertRaises(ConfigError) as caught:
+            spec("  ", "ollama")
+        self.assertIn("non-empty id", str(caught.exception))
+
+    def test_an_id_must_be_a_plain_token(self):
+        for provider_id in ("a b", "a/b", "-lead", "ünï"):
+            with self.subTest(provider_id=provider_id):
+                with self.assertRaises(ConfigError) as caught:
+                    spec(provider_id, "ollama")
+                self.assertIn("may only contain", str(caught.exception))
+
+    def test_a_finite_timeout_is_required(self):
+        for value in (float("nan"), float("inf"), float("-inf")):
+            with self.subTest(value=value):
+                with self.assertRaises(ConfigError) as caught:
+                    spec("p", "ollama", timeout=value)
+                self.assertIn("finite", str(caught.exception))
+
+    def test_a_timeout_must_be_a_number_and_positive(self):
+        for value, needle in (("soon", "must be a number"), (0, "greater than 0")):
+            with self.subTest(value=value):
+                with self.assertRaises(ConfigError) as caught:
+                    spec("p", "ollama", timeout=value)
+                self.assertIn(needle, str(caught.exception))
+
+    def test_max_tokens_must_be_a_positive_whole_number(self):
+        for value, needle in ((0, "at least 1"), (2.5, "whole number")):
+            with self.subTest(value=value):
+                with self.assertRaises(ConfigError) as caught:
+                    spec("p", "ollama", max_tokens=value)
+                self.assertIn(needle, str(caught.exception))
+
+    def test_a_valid_spec_is_normalised(self):
+        entry = spec("  p  ", "Ollama", model=" m ")
+        self.assertEqual(entry.id, "p")
+        self.assertEqual(entry.kind, "ollama")
+        self.assertEqual(entry.model, "m")
+        self.assertEqual(entry.timeout, 1.0)
+
+
+class ApiKeyTests(unittest.TestCase):
+    """A key travels in a header, so it is checked before the request is made."""
+
+    def test_a_key_with_an_embedded_newline_is_rejected_and_not_echoed(self):
+        with self.assertRaises(ConfigError) as caught:
+            build_provider(
+                spec("p", "openai"), env={"TEST_API_KEY": "sk-first\nsecond-part"}
+            )
+        message = str(caught.exception)
+        self.assertIn("TEST_API_KEY", message)
+        self.assertNotIn("second-part", message)
+
+    def test_a_trailing_newline_is_trimmed_rather_than_rejected(self):
+        # A key copied out of a shell or a .env file often ends in a newline;
+        # that is exactly the case worth fixing silently.
+        provider = build_provider(
+            spec("p", "openai"), env={"TEST_API_KEY": FAKE_KEY + "\n"}
+        )
+        self.assertEqual(provider.readiness(), (True, "ready"))
+
+    def test_a_key_outside_latin1_is_rejected(self):
+        with self.assertRaises(ConfigError) as caught:
+            build_provider(spec("p", "openai"), env={"TEST_API_KEY": "sk-\N{KEY}"})
+        self.assertIn("TEST_API_KEY", str(caught.exception))
+
+    def test_a_normal_key_is_used_as_is(self):
+        provider = build_provider(
+            spec("p", "openai"), env={"TEST_API_KEY": f"  {FAKE_KEY}  "}
+        )
+        self.assertEqual(provider.readiness(), (True, "ready"))
+
+    def test_a_stdlib_error_from_the_transport_is_a_provider_error(self):
+        transport = RecordingTransport(
+            ValueError(f"Invalid header value b'Bearer {FAKE_KEY}'")
+        )
+        provider = build_provider(
+            spec("p", "openai"), env={"TEST_API_KEY": FAKE_KEY}, transport=transport
+        )
+        with self.assertRaises(ProviderError) as caught:
+            provider.complete([Message("user", "hi")])
+        message = str(caught.exception)
+        self.assertIn("could not complete the request", message)
+        self.assertIn("ValueError", message)
+        self.assertNotIn(FAKE_KEY, message)
+
+
 class ReadinessTests(unittest.TestCase):
     def test_missing_model_is_reported(self):
         provider = build_provider(spec("p", "ollama", model=""), env={})
@@ -807,6 +904,118 @@ class ConfigFileValidationTests(unittest.TestCase):
         self.assertEqual(entry.max_tokens, 64)
 
 
+    def test_a_non_finite_timeout_is_rejected_in_an_environment_value(self):
+        for value in ("nan", "inf", "-inf"):
+            with self.subTest(value=value):
+                with self.assertRaises(ConfigError) as caught:
+                    ai_config.build_chain(
+                        env={
+                            "OPEN_TOOL_HUB_AI_PROVIDERS": "x",
+                            "OPEN_TOOL_HUB_AI_X_KIND": "ollama",
+                            "OPEN_TOOL_HUB_AI_X_MODEL": "m",
+                            "OPEN_TOOL_HUB_AI_X_TIMEOUT": value,
+                        },
+                        use_default_config=False,
+                    )
+                message = str(caught.exception)
+                self.assertIn("finite", message)
+                self.assertIn("OPEN_TOOL_HUB_AI_X_TIMEOUT", message)
+
+    def test_a_non_finite_timeout_is_rejected_in_a_file(self):
+        # json.dumps writes Infinity, and json.loads reads it back, so a file
+        # can carry a value a human could not have typed on purpose.
+        message = self.assert_config_error(
+            {"id": "x", "kind": "ollama", "model": "m", "timeout": float("inf")},
+            "finite",
+        )
+        self.assertIn("inf", message)
+
+    def test_a_misspelled_field_is_rejected_with_a_suggestion(self):
+        message = self.assert_config_error(
+            {"id": "x", "kind": "ollama", "model": "m", "timout": 5},
+            "did you mean 'timeout'",
+        )
+        self.assertIn("unknown field", message)
+        self.assertIn("'timout'", message)
+
+    def test_every_known_field_is_accepted(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / ai_config.DEFAULT_CONFIG_NAME
+            path.write_text(
+                json.dumps(
+                    {
+                        "providers": [
+                            {
+                                "id": "x",
+                                "label": "X",
+                                "kind": "ollama",
+                                "model": "m",
+                                "base_url": "http://127.0.0.1:11434",
+                                "api_key_env": "",
+                                "timeout": 30,
+                                "max_tokens": 64,
+                                "enabled": True,
+                            }
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            chain = ai_config.build_chain(env={}, path=path)
+            self.assertEqual(chain.order(), ["x"])
+
+    def test_a_misspelled_top_level_key_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / ai_config.DEFAULT_CONFIG_NAME
+            path.write_text(json.dumps({"provider": []}), encoding="utf-8")
+            with self.assertRaises(ConfigError) as caught:
+                ai_config.build_chain(env={}, path=path)
+            message = str(caught.exception)
+            self.assertIn("did you mean 'providers'", message)
+            self.assertIn(ai_config.DEFAULT_CONFIG_NAME, message)
+
+    def test_a_dollar_key_is_treated_as_a_comment(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / ai_config.DEFAULT_CONFIG_NAME
+            path.write_text(
+                json.dumps(
+                    {
+                        "$comment": "my laptop only",
+                        "providers": [
+                            {
+                                "id": "x",
+                                "kind": "ollama",
+                                "model": "m",
+                                "$note": "cheap fallback",
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            chain = ai_config.build_chain(env={}, path=path)
+            self.assertEqual(chain.order(), ["x"])
+
+    def test_a_provider_id_in_a_file_must_be_a_plain_token(self):
+        message = self.assert_config_error(
+            {"id": "a b/c", "kind": "ollama", "model": "m"},
+            "may only contain",
+        )
+        self.assertIn("'a b/c'", message)
+
+    def test_a_provider_id_in_the_environment_list_is_checked_too(self):
+        with self.assertRaises(ConfigError) as caught:
+            ai_config.build_chain(
+                env={
+                    "OPEN_TOOL_HUB_AI_PROVIDERS": "ok,not ok",
+                    "OPEN_TOOL_HUB_AI_KIND": "ollama",
+                    "OPEN_TOOL_HUB_AI_MODEL": "m",
+                },
+                use_default_config=False,
+            )
+        self.assertIn("OPEN_TOOL_HUB_AI_PROVIDERS", str(caught.exception))
+
+
     def test_an_environment_timeout_must_be_positive_too(self):
         with self.assertRaises(ConfigError) as caught:
             ai_config.build_chain(
@@ -1164,6 +1373,29 @@ class ProxyTests(unittest.TestCase):
                 return response.status, self.parse(response.read())
         except urllib.error.HTTPError as error:
             return error.code, self.parse(error.read())
+
+    def call_headers(
+        self,
+        base: str,
+        path: str,
+        *,
+        method: str = "GET",
+        body: Any = None,
+    ) -> tuple[int, dict[str, str]]:
+        """Like :meth:`call`, but returns the response headers."""
+        hdrs: dict[str, str] = {}
+        data = None
+        if body is not None:
+            data = json.dumps(body).encode("utf-8")
+            hdrs["Content-Type"] = "application/json"
+        request = urllib.request.Request(
+            base + path, data=data, headers=hdrs, method=method
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=10) as response:
+                return response.status, dict(response.headers.items())
+        except urllib.error.HTTPError as error:
+            return error.code, dict(error.headers.items())
 
     @staticmethod
     def parse(payload: bytes) -> Any:
@@ -1525,6 +1757,93 @@ class ProxyTests(unittest.TestCase):
         status, payload = self.call(base, "/ai.html", method="POST", body={"a": 1})
         self.assertEqual(status, 405)
         self.assertEqual(payload["error"], "unknown route")
+
+    # -- protocol details --------------------------------------------------
+    def test_get_on_the_chat_route_advertises_post(self):
+        base = self.serve(self.ollama("unused"))
+        status, headers = self.call_headers(base, "/api/ai/chat")
+        self.assertEqual(status, 405)
+        self.assertEqual(headers["Allow"], "POST")
+
+    def test_post_to_the_status_route_is_405_not_404(self):
+        base = self.serve(self.ollama("unused"))
+        status, headers = self.call_headers(base, "/api/ai/status", method="POST")
+        self.assertEqual(status, 405)
+        self.assertEqual(headers["Allow"], "GET, HEAD")
+
+    def test_an_unimplemented_method_gets_json_and_an_allow_header(self):
+        base = self.serve(self.ollama("unused"))
+        for method in ("PUT", "PATCH", "DELETE"):
+            with self.subTest(method=method):
+                status, headers = self.call_headers(
+                    base, "/api/ai/status", method=method
+                )
+                self.assertEqual(status, 405)
+                self.assertEqual(headers["Allow"], "GET, HEAD, POST")
+                self.assertEqual(
+                    headers["Content-Type"], "application/json; charset=utf-8"
+                )
+                # a method the static side does not implement stays a JSON 405
+                # too, instead of the stdlib's HTML 501
+                status, headers = self.call_headers(base, "/ai.html", method=method)
+                self.assertEqual(status, 405)
+                self.assertEqual(headers["Allow"], "GET, HEAD")
+
+    def test_head_on_a_route_answers_like_get_without_a_body(self):
+        base = self.serve(self.ollama("unused"))
+        status, payload = self.call(base, "/api/ai/status", method="HEAD")
+        self.assertEqual(status, 200)
+        self.assertEqual(payload, {})
+        _, headers = self.call_headers(base, "/api/ai/status", method="HEAD")
+        self.assertEqual(headers["Content-Type"], "application/json; charset=utf-8")
+        self.assertGreater(int(headers["Content-Length"]), 0)
+
+    def test_head_on_an_unknown_route_is_still_a_json_404(self):
+        base = self.serve(self.ollama("unused"))
+        status, headers = self.call_headers(base, "/api/ai/nothing", method="HEAD")
+        self.assertEqual(status, 404)
+        self.assertEqual(headers["Content-Type"], "application/json; charset=utf-8")
+
+    def test_options_reports_the_method_each_route_supports(self):
+        base = self.serve(self.ollama("unused"))
+        for path, allow in (
+            ("/api/ai/status", "GET, HEAD"),
+            ("/api/ai/chat", "POST"),
+        ):
+            with self.subTest(path=path):
+                status, headers = self.call_headers(base, path, method="OPTIONS")
+                self.assertEqual(status, 204)
+                self.assertEqual(headers["Allow"], allow)
+
+    def test_a_stalled_request_body_is_answered_with_408(self):
+        handler = ai_proxy.make_handler(lambda: self.ollama("unused"))
+        handler.log_message = lambda *args, **kwargs: None
+        # Production waits CLIENT_TIMEOUT_SECONDS; the test cannot.
+        handler.timeout = 0.2
+        server = ThreadingHTTPServer(
+            ("127.0.0.1", 0), partial(handler, directory=str(self.site))
+        )
+        self.addCleanup(server.server_close)
+        self.addCleanup(server.shutdown)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        with socket.create_connection(
+            ("127.0.0.1", server.server_address[1]), timeout=10
+        ) as connection:
+            connection.sendall(
+                b"POST /api/ai/chat HTTP/1.1\r\n"
+                b"Host: 127.0.0.1\r\n"
+                b"Content-Type: application/json\r\n"
+                b"Content-Length: 20\r\n"
+                b"\r\n"
+            )
+            reply = b""
+            while True:
+                chunk = connection.recv(4096)
+                if not chunk:
+                    break
+                reply += chunk
+        self.assertIn(b"408", reply.split(b"\r\n", 1)[0])
+        self.assertIn(b"request body timed out", reply)
 
     # -- origin guard ------------------------------------------------------
     def test_a_foreign_origin_is_rejected_on_both_routes(self):

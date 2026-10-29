@@ -78,22 +78,35 @@ class AIRequestHandler(NoCacheHandler):
     allowed_origins: frozenset[str] | None = None
     allow_remote = False
     timeout = CLIENT_TIMEOUT_SECONDS
+    #: Set while answering a ``HEAD`` request: headers are sent, body is not.
+    head_only = False
 
     # -- helpers -----------------------------------------------------------
     def _chain(self) -> AIChain:
         builder = type(self).chain_builder
         return builder()
 
-    def _send_json(self, status: int, payload: Mapping[str, Any]) -> None:
+    def _send_json(
+        self,
+        status: int,
+        payload: Mapping[str, Any],
+        *,
+        allow: str | None = None,
+    ) -> None:
         body = (json.dumps(payload, indent=2, ensure_ascii=False) + "\n").encode(
             "utf-8"
         )
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
+        if allow:
+            # RFC 9110 requires Allow on a 405, and it is how a client learns
+            # which method the route does take.
+            self.send_header("Allow", allow)
         self.send_header("X-Content-Type-Options", "nosniff")
         self.end_headers()
-        self.wfile.write(body)
+        if not self.head_only:
+            self.wfile.write(body)
 
     def _origin_allowed(self) -> bool:
         origin = (self.headers.get("Origin") or "").strip()
@@ -163,6 +176,7 @@ class AIRequestHandler(NoCacheHandler):
                     "error": "method not allowed",
                     "detail": "POST a JSON body instead.",
                 },
+                allow="POST",
             )
             return
         if path.startswith(API_PREFIX):
@@ -170,8 +184,35 @@ class AIRequestHandler(NoCacheHandler):
             return
         super().do_GET()
 
+    def do_HEAD(self) -> None:  # noqa: N802 - stdlib naming
+        if urlsplit(self.path).path.startswith(API_PREFIX):
+            # The stdlib only answers HEAD for files, so a HEAD on a route that
+            # exists used to report 404. Answer it exactly like the GET and let
+            # ``_send_json`` drop the body, which is what HEAD asks for. The
+            # flag is cleared afterwards: a handler instance is reused for every
+            # request on a keep-alive connection.
+            self.head_only = True
+            try:
+                self.do_GET()
+            finally:
+                self.head_only = False
+            return
+        super().do_HEAD()
+
     def do_POST(self) -> None:  # noqa: N802 - stdlib naming
         path = urlsplit(self.path).path
+        if path == STATUS_PATH:
+            # The route exists; POST is just not how it is read. Saying 404
+            # here would send a client looking for a typo in the path.
+            self._send_json(
+                405,
+                {
+                    "error": "method not allowed",
+                    "detail": "Read the status with GET.",
+                },
+                allow="GET, HEAD",
+            )
+            return
         if path != CHAT_PATH:
             self._send_json(
                 404 if path.startswith(API_PREFIX) else 405,
@@ -181,6 +222,46 @@ class AIRequestHandler(NoCacheHandler):
         if not self._guard_origin():
             return
         self._handle_chat()
+
+    def do_OPTIONS(self) -> None:  # noqa: N802 - stdlib naming
+        path = urlsplit(self.path).path
+        allow = {STATUS_PATH: "GET, HEAD", CHAT_PATH: "POST"}.get(path)
+        if allow is None:
+            self._reject_method()
+            return
+        # No CORS headers: the page is served from this origin, and a browser
+        # preflight from anywhere else must keep failing.
+        self.send_response(204)
+        self.send_header("Allow", allow)
+        self.end_headers()
+
+    def _reject_method(self) -> None:
+        """Answer an unimplemented method in JSON instead of HTML."""
+        path = urlsplit(self.path).path
+        if path.startswith(API_PREFIX):
+            self._send_json(
+                405,
+                {
+                    "error": "method not allowed",
+                    "detail": "GET /api/ai/status and POST /api/ai/chat only.",
+                },
+                allow="GET, HEAD, POST",
+            )
+            return
+        self._send_json(
+            405,
+            {"error": "unknown route", "path": path},
+            allow="GET, HEAD",
+        )
+
+    def do_PUT(self) -> None:  # noqa: N802 - stdlib naming
+        self._reject_method()
+
+    def do_PATCH(self) -> None:  # noqa: N802 - stdlib naming
+        self._reject_method()
+
+    def do_DELETE(self) -> None:  # noqa: N802 - stdlib naming
+        self._reject_method()
 
     def _read_chat_payload(self) -> dict[str, Any] | None:
         content_type = (self.headers.get("Content-Type") or "").split(";")[0]
@@ -213,7 +294,24 @@ class AIRequestHandler(NoCacheHandler):
                 },
             )
             return None
-        raw = self.rfile.read(length)
+        try:
+            raw = self.rfile.read(length)
+        except TimeoutError:
+            # A client that promises a body and then stalls would otherwise tie
+            # up this thread for CLIENT_TIMEOUT_SECONDS and receive an empty
+            # reply. Answer it, then close: the request stream is desynchronised
+            # and cannot be reused for the next request on this connection.
+            self.close_connection = True
+            self._send_json(
+                408,
+                {
+                    "error": "request body timed out",
+                    "detail": (
+                        f"Nothing arrived within {CLIENT_TIMEOUT_SECONDS} seconds."
+                    ),
+                },
+            )
+            return None
         try:
             payload = json.loads(raw.decode("utf-8"))
         except (UnicodeDecodeError, ValueError):

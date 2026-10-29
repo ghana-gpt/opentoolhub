@@ -53,6 +53,9 @@ jobs:
           python3 scripts/build_site.py --check
           test -f site/index.html
           test -f site/404.html
+          test -f site/ai.html
+          test -f site/js/ai.js
+          test -f site/js/ui.js
           test -f site/data/use-cases.json
           test -f site/data/apis.json
           test -f site/data/catalog.json

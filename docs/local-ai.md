@@ -147,10 +147,16 @@ For the provider id `local`, the prefix is `OPEN_TOOL_HUB_AI_LOCAL_` (uppercase,
 | `ENABLED` | `0`/`false`/`no`/`off` disables the provider | enabled |
 | `LABEL` | Display name in the panel and tables | the provider id |
 
-Numbers and booleans are parsed, not guessed: `TIMEOUT=soon` fails with a
-message that names the variable, and `TIMEOUT=0` fails because a zero-second
-timeout cannot answer. The same rules apply to the JSON file, where the message
-names the file and the provider instead.
+Numbers and booleans are parsed, not guessed: `TIMEOUT=soon`, `TIMEOUT=nan`, and
+`TIMEOUT=inf` fail with a message that names the variable, and `TIMEOUT=0` fails
+because a zero-second timeout cannot answer. The same rules apply to the JSON
+file, where the message names the file and the provider instead.
+
+An `id` is a plain token: letters, digits, `-`, `_`, and `.`, starting with a
+letter or a digit. It becomes part of the environment-variable prefix (for the
+id `local`, `OPEN_TOOL_HUB_AI_LOCAL_KIND`), a `--provider` value, and a key in
+`/api/ai/status`, so an id with a space or a slash would point at a variable
+nobody could set.
 
 ### The JSON file
 
@@ -181,7 +187,9 @@ git-ignored file should not look like a working setup:
 | Rule | Why |
 | --- | --- |
 | Two entries may not share an `id` | The last one would win silently, and the first would be gone |
-| `timeout` must be a number over `0`, `max_tokens` a whole number of at least `1` | A zero timeout cannot answer, and a fractional token cap is a typo |
+| Every field name must be one of `id`, `label`, `kind`, `model`, `base_url`, `api_key_env`, `timeout`, `max_tokens`, `enabled` | An ignored `"timout"` or `"enabeld"` looks applied but is not; the message suggests the field you meant |
+| The only top-level key is `providers`; a key that starts with `$` is a comment, at the top level and inside an entry | `{"provider": [...]}` would otherwise read as "nothing configured" |
+| `timeout` must be a finite number over `0`, `max_tokens` a whole number of at least `1` | A zero timeout cannot answer, `nan`/`inf` fail inside `urllib`, and a fractional token cap is a typo |
 | `base_url` must be an `http://` or `https://` URL | Anything else fails inside `urllib` with a less useful message |
 | `base_url` may not embed `user:password@` | That value is printed by `--list`, `/api/ai/status`, and `--json`, so a credential there would reach a browser |
 | The file must be UTF-8 JSON | A binary or mis-encoded file is reported, not guessed at |
@@ -205,6 +213,12 @@ is rejected with an error that explains the rule, so a mistaken commit fails
 loudly instead of leaking. The key value is read from the environment and kept
 on the provider instance; it is redacted to `***` in every error message before
 that message reaches a terminal, a log line, or the browser.
+
+The value is also checked before it is used. Surrounding whitespace is trimmed,
+because a key pasted from a shell usually ends in a newline, but a newline inside
+the value or a character outside Latin-1 is a configuration error: a key travels
+in an HTTP header, where either one fails mid-request with a message about header
+values rather than about your key.
 
 ## Fallback order
 
@@ -303,8 +317,14 @@ python3 scripts/ai_proxy.py --host 0.0.0.0 --allow-remote   # read the box below
 
 | Route | Method | Purpose |
 | --- | --- | --- |
-| `/api/ai/status` | `GET` | Providers, readiness reasons, fallback order, docs link. Never a key. |
+| `/api/ai/status` | `GET`, `HEAD` | Providers, readiness reasons, fallback order, docs link. Never a key. |
 | `/api/ai/chat` | `POST` | `{"prompt": "...", "provider": "optional-id", "system": "optional"}` |
+
+`HEAD` answers exactly like `GET` with the body left out, so a health check can
+read `Content-Length` without pulling the payload. `OPTIONS` answers `204` with
+an `Allow` header, and a method a route does not take (`GET` on the chat route,
+`POST` on the status route, `PUT`/`PATCH`/`DELETE` anywhere) returns `405` with
+`Allow` set, as JSON rather than the standard library's HTML page.
 
 `POST` replies with `completion` (text, provider, kind, model, latency, usage)
 and `attempts` (one entry per provider tried, including skips). Errors are JSON
@@ -314,7 +334,8 @@ with a short `error` and a human `detail`:
 | --- | --- |
 | `400` | Invalid JSON, an empty or over-long prompt, an unknown provider |
 | `403` | `Origin` is not this proxy's own origin |
-| `405` | `GET /api/ai/chat`, or `POST` outside `/api/ai/` |
+| `405` | A method the route does not take; the reply carries an `Allow` header naming the one it does |
+| `408` | The client promised a body and stopped sending it; the connection is closed |
 | `409` | The requested provider is configured but not ready |
 | `413` | Body over 64 KiB |
 | `415` | `Content-Type` is not `application/json` |
@@ -330,8 +351,9 @@ Safety defaults are on purpose:
   reach a provider;
 - `Origin` must be the proxy's own origin (or, with `--allow-remote`, the host
   the request was addressed to), and `Origin: null` is rejected;
-- a client that stalls in the middle of a request is dropped after 30 seconds,
-  so a half-sent body cannot hold a worker thread open;
+- a client that stalls in the middle of a request is answered with `408` after
+  30 seconds and its connection is closed, so a half-sent body cannot hold a
+  worker thread open;
 - request bodies are never logged — only method, path, and status — and keys
   never appear in a response.
 

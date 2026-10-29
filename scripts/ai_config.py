@@ -31,10 +31,12 @@ Global variables:
 
 from __future__ import annotations
 
+import difflib
 import json
+import math
 import os
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
 from urllib.parse import urlsplit
 
 import config
@@ -48,6 +50,7 @@ from ai_providers import (
     ProviderSpec,
     Transport,
     build_provider,
+    check_provider_id,
 )
 
 DEFAULT_CONFIG_NAME = "ai-providers.local.json"
@@ -57,6 +60,24 @@ DEFAULT_MAX_TOKENS = 512
 
 #: Field names that would put a secret in a file. They are rejected loudly.
 SECRET_FIELDS = ("api_key", "apikey", "key", "token", "secret", "password")
+
+#: Every field a provider entry may set. Anything else is a typo: accepting it
+#: would leave the author believing a setting took effect when it did not.
+PROVIDER_FIELDS = (
+    "id",
+    "label",
+    "kind",
+    "model",
+    "base_url",
+    "api_key_env",
+    "timeout",
+    "max_tokens",
+    "enabled",
+)
+
+#: Top-level keys. A key that starts with ``$`` is metadata (``$comment``,
+#: ``$schema``) and is always allowed, so a file can document itself.
+TOP_LEVEL_FIELDS = ("providers",)
 
 
 def env_prefix(provider_id: str) -> str:
@@ -73,13 +94,20 @@ def _float(value: Any, source: str) -> float:
 
     A ``bool`` is rejected on purpose: Python would happily turn JSON ``true``
     into ``1.0`` and a one-second timeout is never what the author meant.
+    ``nan`` and ``inf`` are rejected too: ``float("nan")`` parses cleanly here
+    and then fails inside ``urllib`` as "Invalid value NaN", which is a
+    traceback rather than a sentence, and an infinite timeout would hang the
+    command forever instead of giving up.
     """
     if isinstance(value, bool) or value is None:
         raise ConfigError(f"{source} must be a number, got {value!r}")
     try:
-        return float(value)
+        number = float(value)
     except (TypeError, ValueError):
         raise ConfigError(f"{source} must be a number, got {value!r}") from None
+    if not math.isfinite(number):
+        raise ConfigError(f"{source} must be a finite number, got {value!r}")
+    return number
 
 
 def _int(value: Any, source: str) -> int:
@@ -132,6 +160,37 @@ def _reject_secret_fields(entry: Mapping[str, Any], path: Path) -> None:
             )
 
 
+def _closest(name: Any, allowed: Sequence[str]) -> str:
+    """Render ``name``, with a suggestion when it is close to a real field."""
+    match = difflib.get_close_matches(str(name), list(allowed), n=1)
+    return f"{name!r} (did you mean {match[0]!r}?)" if match else repr(name)
+
+
+def _reject_unknown_fields(entry: Mapping[str, Any], path: Path) -> None:
+    """Reject a field name that is not part of the schema.
+
+    Ignoring one is the worst option: ``"enabeld": false`` would leave the
+    provider enabled, and ``"timout": 10`` would leave the timeout at its
+    default, while both look applied to whoever wrote the file.
+    """
+    unknown = [
+        key
+        for key in entry
+        if str(key) not in PROVIDER_FIELDS
+        and not str(key).startswith("$")
+        and str(key).strip().lower() not in SECRET_FIELDS
+    ]
+    if not unknown:
+        return
+    raise ConfigError(
+        f"{path} sets unknown field(s) for provider {entry.get('id')!r}: "
+        + ", ".join(_closest(key, PROVIDER_FIELDS) for key in unknown)
+        + ". Known fields: "
+        + ", ".join(PROVIDER_FIELDS)
+        + "."
+    )
+
+
 def load_config_entries(
     path: Path | None, env: Mapping[str, str] | None = None
 ) -> list[dict[str, Any]]:
@@ -151,7 +210,24 @@ def load_config_entries(
     except json.JSONDecodeError as exc:
         raise ConfigError(f"{path} is not valid JSON: {exc}") from None
     if isinstance(payload, dict):
-        entries = payload.get("providers", [])
+        unknown_top = [
+            key
+            for key in payload
+            if str(key) not in TOP_LEVEL_FIELDS and not str(key).startswith("$")
+        ]
+        if unknown_top:
+            raise ConfigError(
+                f"{path} has unknown top-level key(s): "
+                + ", ".join(_closest(key, TOP_LEVEL_FIELDS) for key in unknown_top)
+                + ". Expected a 'providers' list; a key that starts with '$' is "
+                "treated as a comment."
+            )
+        if "providers" not in payload:
+            raise ConfigError(
+                f'{path} has no "providers" list. Write {{"providers": [...]}} '
+                "or a bare JSON array of entries."
+            )
+        entries = payload["providers"]
     else:
         entries = payload
     if not isinstance(entries, list):
@@ -162,9 +238,8 @@ def load_config_entries(
         if not isinstance(entry, dict):
             raise ConfigError(f"{path} has a provider entry that is not an object")
         _reject_secret_fields(entry, path)
-        provider_id = str(entry.get("id", "")).strip()
-        if not provider_id:
-            raise ConfigError(f"{path} has a provider entry without an id")
+        _reject_unknown_fields(entry, path)
+        provider_id = check_provider_id(entry.get("id", ""), source=str(path))
         if provider_id in seen:
             # Two entries with one id would silently make the last one win,
             # which is the kind of quiet surprise a config file should never
@@ -193,7 +268,11 @@ def provider_ids(
     raw = _env(env, f"{ENV_PREFIX}PROVIDERS")
     ids: list[str] = []
     if raw:
-        ids = [part.strip() for part in raw.split(",") if part.strip()]
+        ids = [
+            check_provider_id(part, source=f"{ENV_PREFIX}PROVIDERS")
+            for part in raw.split(",")
+            if part.strip()
+        ]
         duplicates = sorted({item for item in ids if ids.count(item) > 1})
         if duplicates:
             raise ConfigError(
