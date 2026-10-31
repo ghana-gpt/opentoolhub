@@ -61,7 +61,23 @@ serve command.
 - Open a use case and follow its template and example links.
 - Break a filter on purpose and confirm the empty state and "Clear filters".
 
-## 5. Make a change
+## 5. Try a runnable starter
+
+`templates/public-data-dashboard/` is a complete app, not just a brief. It reads
+a committed World Bank snapshot and needs no key, backend, or install step:
+
+```bash
+cd templates/public-data-dashboard
+make serve   # http://127.0.0.1:8000/
+make test    # Node 20+; 20 tests
+```
+
+`make fetch` re-pulls the snapshot from `https://api.worldbank.org/v2` and
+rewrites `app/data/indicators.json`. From the repository root, run
+`make starter-test` to execute the Node suites of every template that ships
+one. The starter's own README explains the file layout and what to change first.
+
+## 6. Make a change
 
 For a data change, start with [data-model.md](data-model.md). A minimal edit is
 adding an API and referencing it from an existing stack slot:
@@ -80,7 +96,7 @@ For a recommender change, edit `scripts/recommend.py` and add a test in
 `tests/test_recommend.py`. Ranking must stay data-driven: no use case ids or
 answers should be hardcoded in the matching logic.
 
-## 6. Publish to GitHub Pages
+## 7. Publish to GitHub Pages
 
 In **Settings → Pages**, set **Source** to **GitHub Actions**. Push to `main`
 and the “Deploy OpenToolHub to GitHub Pages” workflow validates the data, tests

@@ -37,7 +37,7 @@ Every page reads the same validated JSON arrays. These URLs are public and can b
 3. Follow `template_ids` into `data/templates.json` and `example` into `data/examples.json`.
 4. Cite the API's official `url` and `docs_url`; do not invent pricing, limits, or availability.
 
-The browser builder and `scripts/recommend.py` share the `deterministic-lexical-v2` contract recorded under `recommendation` in the manifest: the same normalized and stemmed search document, field weights, stopwords, idf-weighted coverage, exact-match scores, fuzzy tolerance, no-match fallback, and name tie-break. The browser adds optional area checkboxes as a filter; they do not change the text score.
+The browser builder and `scripts/recommend.py` share the `deterministic-lexical-v2` contract recorded under `recommendation` in the manifest: the same normalized and stemmed search document, field weights, stopwords, low-signal (generic) terms, idf-weighted coverage, exact-match scores, fuzzy tolerance, no-match fallback, and name tie-break. The browser adds optional area checkboxes as a filter; they do not change the text score.
 
 ## Constraints
 

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Open data dashboard | OpenToolHub starter</title>
+    <meta
+      name="description"
+      content="A runnable starter dashboard over real World Bank indicator data: pick a country and indicator, read the trend, compare countries, and export CSV."
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="app-header">
+      <div class="wrap header-inner">
+        <div>
+          <p class="eyebrow">OpenToolHub starter</p>
+          <h1>Open data dashboard</h1>
+        </div>
+        <p class="header-note">
+          Real World Bank indicators · no API key · works offline from the
+          committed snapshot
+        </p>
+      </div>
+    </header>
+
+    <main id="main" class="wrap">
+      <section class="panel intro" aria-labelledby="intro-title">
+        <h2 id="intro-title" class="sr-only">About this starter</h2>
+        <p>
+          Choose a country and an indicator. The page shows the latest published
+          value, the change since the first available year, the trend, and a
+          like-for-like comparison with the other countries in the snapshot.
+          Every number links back to the World Bank series it came from.
+        </p>
+      </section>
+
+      <form id="controls" class="controls" aria-label="Dashboard controls">
+        <div class="field">
+          <label for="country-select">Country</label>
+          <select id="country-select" class="select" disabled>
+            <option>Loading…</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="indicator-select">Indicator</label>
+          <select id="indicator-select" class="select" disabled>
+            <option>Loading…</option>
+          </select>
+        </div>
+        <div class="field actions">
+          <button type="button" id="download-csv" class="button" disabled>
+            Download CSV
+          </button>
+          <button type="button" id="copy-link" class="button secondary" disabled>
+            Copy link
+          </button>
+        </div>
+      </form>
+
+      <p id="status" class="status" role="status" aria-live="polite">Loading data…</p>
+
+      <section id="summary" class="kpis" aria-label="Latest values" hidden>
+        <article class="kpi">
+          <p class="kpi-label">Latest value</p>
+          <p class="kpi-value" id="kpi-latest">—</p>
+          <p class="kpi-meta" id="kpi-latest-meta">—</p>
+        </article>
+        <article class="kpi">
+          <p class="kpi-label">Change since first year</p>
+          <p class="kpi-value" id="kpi-change">—</p>
+          <p class="kpi-meta" id="kpi-change-meta">—</p>
+        </article>
+        <article class="kpi">
+          <p class="kpi-label">Highest year</p>
+          <p class="kpi-value" id="kpi-peak">—</p>
+          <p class="kpi-meta" id="kpi-peak-meta">—</p>
+        </article>
+        <article class="kpi">
+          <p class="kpi-label">Rank in snapshot</p>
+          <p class="kpi-value" id="kpi-rank">—</p>
+          <p class="kpi-meta" id="kpi-rank-meta">—</p>
+        </article>
+      </section>
+
+      <section class="panel" aria-labelledby="chart-title" hidden id="chart-panel">
+        <div class="panel-head">
+          <div>
+            <h2 id="chart-title">Trend</h2>
+            <p class="muted" id="chart-subtitle"></p>
+          </div>
+          <a id="indicator-link" class="text-link" href="https://data.worldbank.org">
+            Source series
+          </a>
+        </div>
+        <div class="chart-wrap">
+          <svg
+            id="chart"
+            class="chart"
+            viewBox="0 0 640 260"
+            role="img"
+            aria-labelledby="chart-title chart-desc"
+            preserveAspectRatio="xMidYMid meet"
+          ></svg>
+          <p id="chart-desc" class="sr-only"></p>
+        </div>
+        <p class="chart-legend muted" id="chart-legend"></p>
+      </section>
+
+      <div id="error" class="state error" role="alert" hidden></div>
+
+      <div class="grid-two">
+        <section class="panel" aria-labelledby="table-title" hidden id="table-panel">
+          <h2 id="table-title">Every published year</h2>
+          <p class="muted small" id="table-subtitle"></p>
+          <div class="table-scroll">
+            <table>
+              <caption class="sr-only">Values for the selected country and indicator</caption>
+              <thead>
+                <tr><th scope="col">Year</th><th scope="col">Value</th></tr>
+              </thead>
+              <tbody id="table-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="compare-title" hidden id="compare-panel">
+          <h2 id="compare-title">Country comparison</h2>
+          <p class="muted small" id="compare-subtitle"></p>
+          <div class="table-scroll">
+            <table>
+              <caption class="sr-only">All snapshot countries for the same year</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Country</th>
+                  <th scope="col">Value</th>
+                </tr>
+              </thead>
+              <tbody id="compare-body"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <section class="panel provenance" aria-labelledby="source-title">
+        <h2 id="source-title">Data and method</h2>
+        <dl id="source-list"></dl>
+        <p class="small muted">
+          Refresh the snapshot with <code>python3 scripts/fetch_data.py</code>, then
+          reload the page. The app never calls the API from the browser, so it also
+          works from a laptop with no network.
+        </p>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <div class="wrap">
+        <p class="small muted">
+          Starter app, not a published product. Check the provider's current terms
+          and attribution requirements before you ship.
+        </p>
+      </div>
+    </footer>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
+

@@ -52,6 +52,18 @@ resolves the winning use case to its stack, APIs, templates, examples, and
 rationale. Ambiguous matches return alternatives. It does not call a model and
 does not rank providers by quality.
 
+Short and generic requests are handled by refusing rather than guessing. Catalog
+vocabulary that almost every use case shares ("data", "local", "tracker",
+"planner", "price") is capped at weight 2, is never fuzzy-matched, and cannot
+carry a match alone, so "fitness tracker" reports no match instead of the
+nearest dashboard. A multi-word query needs either 45% idf-weighted coverage or
+one distinctive non-generic term (weight 3 or more, shared by at most two use
+cases) covering at least 25% of the query, which keeps phrases such as "weather
+app for farmers in northern Ghana" on `climate-resilience` while "stock market
+prices" still finds nothing. Fuzzy matches score below the correctly spelled
+query and only apply to words that appear nowhere in the catalog, so `flood`
+never resolves to `food`.
+
 ## Not implemented yet
 
 These are design goals, not current behavior:

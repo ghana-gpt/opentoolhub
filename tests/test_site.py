@@ -9,7 +9,10 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
+import subprocess
 import sys
+import tempfile
 import unittest
 import xml.etree.ElementTree as ET
 from html.parser import HTMLParser
@@ -37,6 +40,51 @@ PAGE_SCRIPTS = {
 PAGE_FILES = tuple(sorted(path.name for path in SITE.glob("*.html")))
 
 EXTERNAL_PREFIXES = ("http://", "https://", "mailto:", "tel:", "#", "data:")
+
+# Runs site/js/data.js under Node so the browser scorer can be compared with
+# scripts/recommend.py for identical queries. The module is copied to a .mjs
+# file so Node treats it as an ES module without a package.json.
+NODE_PARITY_SCRIPT = """
+import fs from "node:fs";
+import path from "node:path";
+import { buildSearchIndex, scoreUseCases } from "./data.mjs";
+
+const root = process.argv[2];
+const queries = JSON.parse(process.argv[3]);
+const read = (name) =>
+  JSON.parse(fs.readFileSync(path.join(root, "data", `${name}.json`), "utf8"));
+
+const useCases = read("use-cases");
+const categories = read("categories");
+const stacks = read("stacks");
+const apis = read("apis");
+const templates = read("templates");
+
+const data = {
+  useCases,
+  categories,
+  stacks,
+  apis,
+  templates,
+  categoryById: new Map(categories.map((item) => [item.id, item])),
+  stackById: new Map(stacks.map((item) => [item.id, item])),
+  templateById: new Map(templates.map((item) => [item.id, item])),
+  apiById: new Map(apis.map((item) => [item.id, item])),
+  useCaseById: new Map(useCases.map((item) => [item.id, item])),
+};
+
+const index = buildSearchIndex(data);
+const results = {};
+for (const query of queries) {
+  results[query] = scoreUseCases(query, [], data, index).map((item) => ({
+    id: item.useCase.id,
+    score: item.score,
+    matched_by: item.matchedBy,
+  }));
+}
+process.stdout.write(JSON.stringify(results));
+"""
+
 
 
 class PageParser(HTMLParser):
@@ -270,6 +318,15 @@ class SiteTests(unittest.TestCase):
         self.assertEqual(contract["engine"], "deterministic-lexical-v2")
         self.assertEqual(contract["exact_match_fields"], ["id", "name", "aliases"])
         self.assertEqual(contract["stopwords"], sorted(recommend.STOPWORDS))
+        self.assertEqual(
+            contract["generic_terms"]["terms"], sorted(recommend.GENERIC_TERMS)
+        )
+        self.assertEqual(
+            contract["generic_terms"]["weight"], recommend.GENERIC_WEIGHT
+        )
+        self.assertIn("not generic", contract["scoring"]["gate"])
+        self.assertIn(str(recommend.MIN_SOLE_COVERAGE), contract["scoring"]["gate"])
+        self.assertIn(str(recommend.FUZZY_STRENGTH), contract["scoring"]["fuzzy"])
 
         data_js = (SITE / "js" / "data.js").read_text(encoding="utf-8")
         stopword_literal = re.search(
@@ -278,6 +335,13 @@ class SiteTests(unittest.TestCase):
         self.assertIsNotNone(stopword_literal)
         self.assertEqual(
             set(stopword_literal.group(1).split()), set(recommend.STOPWORDS)
+        )
+        generic_literal = re.search(
+            r"const GENERIC_TERMS = new Set\(\s*\"([^\"]+)\"", data_js, re.S
+        )
+        self.assertIsNotNone(generic_literal)
+        self.assertEqual(
+            set(generic_literal.group(1).split()), set(recommend.GENERIC_TERMS)
         )
         for field in ("category.aliases", "stack.best_for", "tool.slot", "templateById"):
             self.assertIn(field, data_js)
@@ -290,6 +354,9 @@ class SiteTests(unittest.TestCase):
             f"FUZZY_WEIGHT = {recommend.FUZZY_WEIGHT}",
             f"MIN_KEYWORD_SCORE = {recommend.MIN_KEYWORD_SCORE}",
             f"FUZZY_MIN_WEIGHT = {recommend.FUZZY_MIN_WEIGHT}",
+            f"GENERIC_WEIGHT = {recommend.GENERIC_WEIGHT}",
+            f"MIN_SOLE_COVERAGE = {recommend.MIN_SOLE_COVERAGE}",
+            f"FUZZY_STRENGTH = {recommend.FUZZY_STRENGTH}",
         ):
             self.assertIn(constant, data_js)
         for suffix, replacement in recommend.STEM_RULES:
@@ -301,6 +368,53 @@ class SiteTests(unittest.TestCase):
         self.assertIn("suggestUseCases(", home_js)
         self.assertIn("Closest use cases", home_js)
         self.assertNotIn("Math.min(89, 80 + bonus)", home_js)
+
+    @unittest.skipUnless(shutil.which("node"), "node is not installed")
+    def test_browser_scorer_matches_python_for_the_same_queries(self):
+        queries = [
+            "weather app for farmers in northern Ghana",
+            "reporting broken streetlights to local government",
+            "farmers market prices",
+            "stock market prices",
+            "fitness tracker",
+            "crop insurance claims for smallholder farmers",
+            "dashboard",
+            "app for my business",
+            "fligths to rome",
+            "travle app",
+            "vaccination reminders for children",
+            "air quality monitoring",
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            shutil.copyfile(SITE / "js" / "data.js", tmp_path / "data.mjs")
+            (tmp_path / "parity.mjs").write_text(
+                NODE_PARITY_SCRIPT, encoding="utf-8"
+            )
+            completed = subprocess.run(
+                [
+                    "node",
+                    str(tmp_path / "parity.mjs"),
+                    str(ROOT),
+                    json.dumps(queries),
+                ],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        browser = json.loads(completed.stdout)
+        for query in queries:
+            expected = [
+                {
+                    "id": item["use_case"]["id"],
+                    "score": item["score"],
+                    "matched_by": item["matched_by"],
+                }
+                for item in recommend.rank(query)
+            ]
+            with self.subTest(query=query):
+                self.assertEqual(browser[query], expected)
 
     def test_local_assets_and_links_exist(self):
         for page in PAGE_SCRIPTS:

@@ -104,6 +104,71 @@ class RankingTests(unittest.TestCase):
     def test_short_tokens_are_not_fuzzy_matched(self):
         self.assertIsNone(recommend._fuzzy_term("cit", {"city"}))
 
+    def test_generic_terms_are_never_fuzzy_matched(self):
+        self.assertIn("tracker", recommend.GENERIC_TERMS)
+        self.assertIsNone(recommend._fuzzy_term("tracker", {"tracker"}))
+
+    def test_generic_terms_are_capped_in_every_field(self):
+        index = recommend._build_index(DATA)
+        self.assertEqual(
+            index["weights"]["public-health-platform"]["tracker"],
+            recommend.GENERIC_WEIGHT,
+        )
+
+    def test_generic_term_cannot_carry_a_two_word_query(self):
+        with self.assertRaises(recommend.NoMatchError):
+            recommend.build_recommendation("fitness tracker", DATA)
+
+    def test_single_distinctive_term_needs_enough_coverage(self):
+        # "farmer" is distinctive, but one term of five is too little of the
+        # query for a confident answer.
+        with self.assertRaises(recommend.NoMatchError):
+            recommend.build_recommendation(
+                "crop insurance claims for smallholder farmers", DATA
+            )
+
+    def test_single_generic_word_does_not_match(self):
+        # "app for my business" reduces to one low-signal word, so the engine
+        # refuses rather than listing four unrelated dashboards.
+        with self.assertRaises(recommend.NoMatchError) as caught:
+            recommend.build_recommendation("app for my business", DATA)
+        self.assertTrue(caught.exception.closest)
+
+    def test_phrase_query_matches_the_use_case_that_covers_most_terms(self):
+        result = recommend.build_recommendation(
+            "weather app for farmers in northern Ghana", DATA
+        )
+        self.assertEqual(result["use_case"]["id"], "climate-resilience")
+        self.assertEqual(result["matched_by"], "keywords")
+
+    def test_phrase_query_ignores_generic_terms(self):
+        result = recommend.build_recommendation("farmers market prices", DATA)
+        self.assertEqual(result["use_case"]["id"], "community-food-access")
+
+    def test_local_service_query_resolves_to_the_city_dashboard(self):
+        result = recommend.build_recommendation(
+            "reporting broken streetlights to local government", DATA
+        )
+        self.assertEqual(result["use_case"]["id"], "city-dashboard")
+
+    def test_fuzzy_matching_ignores_known_catalog_words(self):
+        # "flood" is a real catalog term, so it must not fuzzy-match "food" in
+        # another use case just because the two are one edit apart.
+        query = "flood alerts for riverside villages"
+        result = recommend.build_recommendation(query, DATA)
+        self.assertEqual(result["use_case"]["id"], "climate-resilience")
+        self.assertEqual(result["matched_by"], "keywords")
+        ranked_ids = [item["use_case"]["id"] for item in recommend.rank(query, DATA)]
+        self.assertEqual(ranked_ids, ["climate-resilience"])
+
+    def test_fuzzy_only_match_scores_below_the_exact_spelling(self):
+        exact = recommend.build_recommendation("flights to rome", DATA)
+        typo = recommend.build_recommendation("fligths to rome", DATA)
+        self.assertEqual(exact["matched_by"], "keywords")
+        self.assertEqual(typo["matched_by"], "fuzzy")
+        self.assertEqual(exact["use_case"]["id"], typo["use_case"]["id"])
+        self.assertLess(typo["score"], exact["score"])
+
     def test_single_distinctive_keyword_matches(self):
         result = recommend.build_recommendation("food bank locator", DATA)
         self.assertEqual(result["use_case"]["id"], "community-food-access")

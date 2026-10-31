@@ -49,10 +49,17 @@ scores candidates:
 
 Keyword scores combine idf-weighted field coverage with term rarity
 (`50 + round(38 * coverage * (0.6 + 0.4 * rarity))`), so a rare keyword in a
-name or alias outranks filler shared by every use case. A candidate must cover
-half the query unless one distinctive term carries it alone. Tokens of five or
-more characters also match within one edit or adjacent transposition, scored at
-0.8 of their field weight, so `travle` still finds `travel`.
+name or alias outranks filler shared by every use case. Low-signal catalog words
+such as "data", "local", "tracker", "planner", and "price" are indexed at weight
+2, are never fuzzy-matched, and never count as distinctive evidence, so "fitness
+tracker" returns no match instead of the nearest dashboard. A candidate must
+cover 45% of the query, or one distinctive term (weight 3 or more, shared by at
+most two use cases, not generic) must cover 25% of it on its own. Tokens of five
+or more characters also match within one edit or adjacent transposition, scored
+at 0.8 of their field weight and 0.85 of the keyword score when nothing matched
+exactly, so `travle` still finds `travel` without outranking a real keyword. A
+token that already exists somewhere in the catalog is treated as a real word,
+not a typo, so `flood` never fuzzy-matches `food`.
 
 A score below 90 with a runner-up within 5 points sets
 `needs_disambiguation` and includes alternatives. When nothing clears the

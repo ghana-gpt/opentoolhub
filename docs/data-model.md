@@ -77,13 +77,22 @@ The `recommendation` object is the shared browser/CLI contract:
   to spaces. `stopwords` is the exact list. `stemming` reduces British spellings
   to `-ize`, plurals to their singular, and drops trailing `ing`/`ed` so
   "visualisations", "visualization", and "visualise" all collapse together.
+- `generic_terms` lists the low-signal words every record shares ("data",
+  "local", "tracker", "planner", "price"). They are indexed at `weight` (2)
+  whichever field contains them, are never fuzzy-matched, and never count as the
+  distinctive term that carries a query, so "fitness tracker" does not resolve
+  through "tracker".
 - `scoring` records exact id/name/alias scores and the keyword formula:
   `50 + round(38 * coverage * (0.6 + 0.4 * rarity))`, capped at 88 and dropped
   below 55. `coverage` is the idf-weighted share of the query that the use case
-  covers; `gate` requires half the query to match unless a single distinctive
-  term (weight 3 or more, shared by at most two use cases) carries the query.
-  `fuzzy` accepts one edit or adjacent transposition for tokens of five or more
-  characters and scores those matches at 0.8 of their field weight.
+  covers. `gate` requires `coverage >= 0.45`, or a single distinctive term
+  (weight 3 or more, shared by at most two use cases, not generic) covering at
+  least `0.25` of the query. `fuzzy` accepts one edit or adjacent transposition
+  for tokens of five or more characters, scores those matches at 0.8 of their
+  field weight, and keeps `0.85` of the resulting keyword score when every match
+  was fuzzy. Only tokens absent from the whole catalog vocabulary are fuzzed, so
+  `flood` never reaches `food` in another use case, and a query that reduces to a
+  single generic term never matches.
 - `fallback` documents both non-answer paths. `NoMatchError` carries every use
   case id plus the closest partial matches, so the CLI prints them and the
   browser lists them under "Closest use cases". `needs_disambiguation` marks the

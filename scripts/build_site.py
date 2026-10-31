@@ -34,12 +34,16 @@ from config import (
 )
 from recommend import (
     FUZZY_MIN_WEIGHT,
+    FUZZY_STRENGTH,
     FUZZY_WEIGHT,
+    GENERIC_TERMS,
+    GENERIC_WEIGHT,
     KEYWORD_SCORE_FLOOR,
     KEYWORD_SCORE_SPAN,
     MAX_KEYWORD_SCORE,
     MIN_COVERAGE,
     MIN_KEYWORD_SCORE,
+    MIN_SOLE_COVERAGE,
     STEM_RULES,
     STOPWORDS,
 )
@@ -224,6 +228,14 @@ def build_catalog_manifest(sources: list[Path]) -> dict[str, Any]:
                 "endings": "ing and ed removed after the -ise rules",
             },
             "stopwords": sorted(STOPWORDS),
+            "generic_terms": {
+                "weight": GENERIC_WEIGHT,
+                "terms": sorted(GENERIC_TERMS),
+                "rule": (
+                    "generic terms are indexed at their capped weight, are never "
+                    "fuzzy-matched, and never count as distinctive evidence"
+                ),
+            },
             "scoring": {
                 "id_exact": 100,
                 "name_exact": 95,
@@ -242,11 +254,15 @@ def build_catalog_manifest(sources: list[Path]) -> dict[str, Any]:
                 ),
                 "gate": (
                     f"coverage >= {MIN_COVERAGE}, or a single distinctive term "
-                    "(field weight >= 3 shared by at most 2 use cases)"
+                    "(field weight >= 3, shared by at most 2 use cases, and not "
+                    f"generic) covering >= {MIN_SOLE_COVERAGE} of the query; a "
+                    "query that reduces to one generic term never matches"
                 ),
                 "fuzzy": (
                     "one edit or adjacent transposition for tokens of 5+ characters, "
-                    f"field weight >= {FUZZY_MIN_WEIGHT}, weighted at {FUZZY_WEIGHT}"
+                    f"field weight >= {FUZZY_MIN_WEIGHT}, weighted at {FUZZY_WEIGHT}; "
+                    "tokens already present in the catalog vocabulary are never "
+                    f"fuzzed; fuzzy-only matches keep {FUZZY_STRENGTH} of the score"
                 ),
             },
             "fallback": {

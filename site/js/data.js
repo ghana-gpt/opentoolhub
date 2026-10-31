@@ -74,7 +74,19 @@ export function tokenize(value) {
 }
 
 const STOPWORDS = new Set(
-  "a an and any app application are around best build building can compare compared comparison create do does find finder for from get good great help how i in into is it like looking make me my near nearby need needs new of on or please show shows simple some that the their them there this to tool tools us use used using versus vs want we where which who why will with you your".split(
+  "a about after again all also an and any app application are around before best both build building but by can compare compared comparison create did do does during each every few find finder for from further get good great help here how i in into is it like looking make me more most much my near nearby need needs new no nor not of off on once only or other out over please same should show shows simple since some such than that the their them then there this through to too tool tools under until up us use used using very versus vs want was we were what when where which while who why will with would you your".split(
+    " "
+  )
+);
+
+/**
+ * Low-signal words that show up in almost every summary: "data", "local",
+ * "tracker", "planner". They are indexed at GENERIC_WEIGHT and can never be the
+ * only evidence for a match, so "fitness tracker" is not resolved by "tracker".
+ * Mirrors GENERIC_TERMS in scripts/recommend.py.
+ */
+const GENERIC_TERMS = new Set(
+  "access alert article builder business civic community condition context data dataset developer digital discovery environment event feed forecast geocod geolocation government information interest local location management manager map market media mobile monitor online people place plan planner platform portal pric price program project public researcher rout route schedule service small software solution source stack support system team tracker useful user web website".split(
     " "
   )
 );
@@ -82,13 +94,16 @@ const STOPWORDS = new Set(
 // Scoring constants and stem rules mirrored from scripts/recommend.py. Keep the
 // two implementations in step: tests/test_site.py checks the published contract.
 const MAX_TOKEN_WEIGHT = 4;
-const MIN_COVERAGE = 0.5;
+const MIN_COVERAGE = 0.45;
 const KEYWORD_SCORE_FLOOR = 50;
 const KEYWORD_SCORE_SPAN = 38;
 const MAX_KEYWORD_SCORE = 88;
 const FUZZY_WEIGHT = 0.8;
 const MIN_KEYWORD_SCORE = 55;
 const FUZZY_MIN_WEIGHT = 3;
+const GENERIC_WEIGHT = 2;
+const MIN_SOLE_COVERAGE = 0.25;
+const FUZZY_STRENGTH = 0.85;
 
 const STEM_RULES = [
   ["isations", "ize"],
@@ -257,8 +272,9 @@ export function buildSearchIndex(data) {
     const terms = new Map();
     const add = (text, weight) => {
       for (const term of scoringTokens(text)) {
-        if ((terms.get(term) ?? 0) < weight) {
-          terms.set(term, weight);
+        const termWeight = GENERIC_TERMS.has(term) ? GENERIC_WEIGHT : weight;
+        if ((terms.get(term) ?? 0) < termWeight) {
+          terms.set(term, termWeight);
         }
       }
     };
@@ -309,7 +325,12 @@ export function buildSearchIndex(data) {
       documentFrequency.set(term, (documentFrequency.get(term) ?? 0) + 1);
     }
   }
-  return { weights, documentFrequency, count: Math.max(weights.size, 1) };
+  return {
+    weights,
+    documentFrequency,
+    count: Math.max(weights.size, 1),
+    vocabulary: new Set(documentFrequency.keys()),
+  };
 }
 
 function idf(term, index) {
@@ -356,12 +377,16 @@ function withinOneEdit(left, right) {
 }
 
 function fuzzyTerm(term, terms) {
-  if (term.length < 5) {
+  if (term.length < 5 || GENERIC_TERMS.has(term)) {
     return null;
   }
   const matches = [];
   for (const [candidate, weight] of terms) {
-    if (weight >= FUZZY_MIN_WEIGHT && withinOneEdit(term, candidate)) {
+    if (
+      weight >= FUZZY_MIN_WEIGHT &&
+      !GENERIC_TERMS.has(candidate) &&
+      withinOneEdit(term, candidate)
+    ) {
       matches.push(candidate);
     }
   }
@@ -381,6 +406,11 @@ function evidence(useCaseId, tokens, index) {
       exactMatches += 1;
       matched.push(token);
       matchedWeight += tokenIdf * terms.get(token);
+      continue;
+    }
+    if (index.vocabulary.has(token)) {
+      // Another use case owns this word, so it is a real term rather than a
+      // typo and must not fuzzy-match a different word here.
       continue;
     }
     const candidate = fuzzyTerm(token, terms);
@@ -424,15 +454,22 @@ function scoreOneUseCase(useCase, normalizedIdea, tokens, index) {
   }
 
   const { coverage, matched, fuzzyOnly } = evidence(useCase.id, tokens, index);
+  const terms = index.weights.get(useCase.id);
+  if (tokens.length === 1 && matched.length && GENERIC_TERMS.has(matched[0])) {
+    // A query that reduces to one low-signal word ("tracker", "business")
+    // names no use case, so it is refused instead of ranked.
+    return { score: 0, matchedBy: "none" };
+  }
   // One hit inside a multi-word phrase is weak evidence, unless the term is a
   // rare keyword or name match that almost no other use case shares.
+  const distinctive = matched.some(
+    (term) =>
+      terms.get(term) >= 3 &&
+      (index.documentFrequency.get(term) ?? 0) <= 2 &&
+      !GENERIC_TERMS.has(term)
+  );
   if (matched.length < 2 && tokens.length > 1) {
-    const terms = index.weights.get(useCase.id);
-    const distinctive = matched.some(
-      (term) =>
-        terms.get(term) >= 3 && (index.documentFrequency.get(term) ?? 0) <= 2
-    );
-    if (!distinctive) {
+    if (!distinctive || coverage < MIN_SOLE_COVERAGE) {
       return { score: 0, matchedBy: "none" };
     }
   } else if (coverage < MIN_COVERAGE) {
@@ -443,7 +480,11 @@ function scoreOneUseCase(useCase, normalizedIdea, tokens, index) {
       (term) => 1 - (index.documentFrequency.get(term) ?? 0) / index.count
     )
   );
-  const strength = coverage * (0.6 + 0.4 * rarity);
+  let strength = coverage * (0.6 + 0.4 * rarity);
+  if (fuzzyOnly) {
+    // Typos are evidence, but they should never outrank an exact keyword.
+    strength *= FUZZY_STRENGTH;
+  }
   const score = Math.min(
     MAX_KEYWORD_SCORE,
     KEYWORD_SCORE_FLOOR + roundScore(KEYWORD_SCORE_SPAN * strength)

@@ -34,10 +34,23 @@ jobs:
 
       - name: Check JavaScript syntax
         run: |
-          for file in site/js/*.js; do
-            target="/tmp/$(basename "$file" .js).mjs"
+          for file in site/js/*.js templates/*/app/*.js; do
+            [ -e "$file" ] || continue
+            target="/tmp/${file//\//-}.mjs"
             cp "$file" "$target"
             node --check "$target"
+          done
+
+      - name: Test runnable starters
+        run: |
+          last=""
+          for suite in templates/*/tests/*.test.mjs; do
+            [ -e "$suite" ] || continue
+            starter="$(dirname "$(dirname "$suite")")"
+            if [ "$starter" = "$last" ]; then continue; fi
+            last="$starter"
+            echo "== $starter"
+            ( cd "$starter" && node --test tests/*.test.mjs )
           done
 
       - name: Stage site data

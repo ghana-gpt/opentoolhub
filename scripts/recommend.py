@@ -20,24 +20,43 @@ from typing import Any
 from config import DATA_DIR
 
 STOPWORDS = frozenset(
-    "a an and any app application are around best build building can compare "
-    "compared comparison create do does find finder for from get good great "
-    "help how i in into is it like looking make me my near nearby need needs "
-    "new of on or please show shows simple some that the their them there this "
-    "to tool tools us use used using versus vs want we where which who why "
-    "will with you your".split()
+    "a about after again all also an and any app application are around before "
+    "best both build building but by can compare compared comparison create did "
+    "do does during each every few find finder for from further get good great "
+    "help here how i in into is it like looking make me more most much my near "
+    "nearby need needs new no nor not of off on once only or other out over "
+    "please same should show shows simple since some such than that the their "
+    "them then there this through to too tool tools under until up us use used "
+    "using very versus vs want was we were what when where which while who why "
+    "will with would you your".split()
+)
+
+# Low-signal words that show up in almost every summary: "data", "local",
+# "tracker", "planner". They are indexed at GENERIC_WEIGHT and can never be the
+# only evidence for a match, so "fitness tracker" is not resolved by "tracker".
+GENERIC_TERMS = frozenset(
+    "access alert article builder business civic community condition context "
+    "data dataset developer digital discovery environment event feed forecast "
+    "geocod geolocation government information interest local location "
+    "management manager map market media mobile monitor online people place "
+    "plan planner platform portal pric price program project public researcher "
+    "rout route schedule service small software solution source stack support "
+    "system team tracker useful user web website".split()
 )
 
 # Field weights and scoring constants. They are mirrored by site/js/data.js so
 # the browser builder and the CLI rank the same catalog the same way.
 MAX_TOKEN_WEIGHT = 4
-MIN_COVERAGE = 0.5
+MIN_COVERAGE = 0.45
 KEYWORD_SCORE_FLOOR = 50
 KEYWORD_SCORE_SPAN = 38
 MAX_KEYWORD_SCORE = 88
 FUZZY_WEIGHT = 0.8
 MIN_KEYWORD_SCORE = 55
 FUZZY_MIN_WEIGHT = 3
+GENERIC_WEIGHT = 2
+MIN_SOLE_COVERAGE = 0.25
+FUZZY_STRENGTH = 0.85
 
 # British and plural spellings are reduced to one form before comparison.
 STEM_RULES = (
@@ -143,10 +162,11 @@ def tokenize(text: str) -> list[str]:
 
 
 def _add_terms(weights: dict[str, int], text: str, weight: int) -> None:
-    """Record every token of text at the given field weight."""
+    """Record every token of text, capping low-signal words at GENERIC_WEIGHT."""
     for token in tokenize(text):
-        if weights.get(token, 0) < weight:
-            weights[token] = weight
+        token_weight = GENERIC_WEIGHT if token in GENERIC_TERMS else weight
+        if weights.get(token, 0) < token_weight:
+            weights[token] = token_weight
 
 
 def _use_case_weights(use_case: dict, data: dict[str, Any]) -> dict[str, int]:
@@ -196,6 +216,7 @@ def _build_index(data: dict[str, Any]) -> dict[str, Any]:
         "weights": weights,
         "df": document_frequency,
         "count": max(len(weights), 1),
+        "vocabulary": frozenset(document_frequency),
     }
 
 
@@ -239,10 +260,12 @@ def _within_one_edit(left: str, right: str) -> bool:
 
 def _fuzzy_term(term: str, vocabulary: Any) -> str | None:
     """Return the single vocabulary term one edit away, if exactly one exists."""
-    if len(term) < 5:
+    if len(term) < 5 or term in GENERIC_TERMS:
         return None
     matches = [
-        candidate for candidate in vocabulary if _within_one_edit(term, candidate)
+        candidate
+        for candidate in vocabulary
+        if candidate not in GENERIC_TERMS and _within_one_edit(term, candidate)
     ]
     return matches[0] if len(matches) == 1 else None
 
@@ -263,6 +286,10 @@ def _evidence(
             exact_matches += 1
             matched.append(token)
             matched_weight += token_idf * weights[token]
+            continue
+        if token in index["vocabulary"]:
+            # Another use case owns this word, so it is a real term rather than
+            # a typo and must not fuzzy-match a different word here.
             continue
         candidate = _fuzzy_term(
             token,
@@ -292,19 +319,29 @@ def _score(
         return 0, "none"
 
     coverage, matched, fuzzy_only = _evidence(use_case["id"], query_tokens, index)
+    weights = index["weights"][use_case["id"]]
+    if len(query_tokens) == 1 and matched and matched[0] in GENERIC_TERMS:
+        # A query that reduces to one low-signal word ("tracker", "business")
+        # names no use case, so it is refused instead of ranked.
+        return 0, "none"
     # One hit inside a multi-word phrase is weak evidence, unless the term is a
     # rare keyword or name match that almost no other use case shares.
+    distinctive = any(
+        weights[term] >= 3
+        and index["df"].get(term, 0) <= 2
+        and term not in GENERIC_TERMS
+        for term in matched
+    )
     if len(matched) < 2 and len(query_tokens) > 1:
-        weights = index["weights"][use_case["id"]]
-        distinctive = any(
-            weights[term] >= 3 and index["df"].get(term, 0) <= 2 for term in matched
-        )
-        if not distinctive:
+        if not distinctive or coverage < MIN_SOLE_COVERAGE:
             return 0, "none"
     elif coverage < MIN_COVERAGE:
         return 0, "none"
     rarity = max(1 - index["df"].get(term, 0) / index["count"] for term in matched)
     strength = coverage * (0.6 + 0.4 * rarity)
+    if fuzzy_only:
+        # Typos are evidence, but they should never outrank an exact keyword.
+        strength *= FUZZY_STRENGTH
     score = min(
         MAX_KEYWORD_SCORE,
         KEYWORD_SCORE_FLOOR + int(round(KEYWORD_SCORE_SPAN * strength)),

@@ -1,6 +1,7 @@
 PYTHON ?= python3
+NODE ?= node
 
-.PHONY: help build serve validate test check clean ai-list ai-serve ai-check ai-live ai-test
+.PHONY: help build serve validate test check clean ai-list ai-serve ai-check ai-live ai-test starter-test
 
 help:
 	@echo "OpenToolHub development commands"
@@ -9,6 +10,7 @@ help:
 	@echo "  make validate  Validate the catalog with --strict"
 	@echo "  make test      Run the Python test suite"
 	@echo "  make check     Validate, test, stage, and verify the site artifact"
+	@echo "  make starter-test  Run the Node tests of every runnable template"
 	@echo "  make ai-list   List configured AI providers (fine with none)"
 	@echo "  make ai-check  Send one real request and report the model's answer"
 	@echo "  make ai-live   Run the opt-in live provider suite against that provider"
@@ -49,5 +51,17 @@ ai-live:
 ai-test:
 	$(PYTHON) -m unittest tests.test_ai -v
 
+starter-test:
+	@found=0; last=""; \
+	for suite in templates/*/tests/*.test.mjs; do \
+		[ -e "$$suite" ] || continue; \
+		starter=$$(dirname "$$(dirname "$$suite")"); \
+		if [ "$$starter" = "$$last" ]; then continue; fi; \
+		last=$$starter; found=1; \
+		echo "== $$starter"; \
+		( cd "$$starter" && $(NODE) --test tests/*.test.mjs ) || exit 1; \
+	done; \
+	if [ "$$found" -eq 0 ]; then echo "No template test suites found."; fi
+
 clean:
-	rm -rf site/data scripts/__pycache__ tests/__pycache__
+	rm -rf site/data scripts/__pycache__ tests/__pycache__ templates/*/scripts/__pycache__
